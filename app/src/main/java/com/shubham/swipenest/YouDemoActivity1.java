@@ -1,25 +1,21 @@
 package com.shubham.swipenest;
 
+import android.os.Bundle;
+import android.os.PersistableBundle;
+import android.util.Log;
+
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.constraintlayout.motion.widget.MotionLayout;
-import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import androidx.viewpager2.widget.ViewPager2;
 
-import android.content.Intent;
-import android.os.Bundle;
-import android.util.Log;
-import android.view.MotionEvent;
-import android.view.View;
-
-public class MainActivity extends AppCompatActivity {
-
+public class YouDemoActivity1 extends AppCompatActivity {
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    public void onCreate(@Nullable Bundle savedInstanceState, @Nullable PersistableBundle persistentState) {
+        super.onCreate(savedInstanceState, persistentState);
         setContentView(R.layout.motion_24_youtube);
-        Log.d("tag_main_activity", "main activity called");
+        Log.d("tag_you_tube_demo", "YouDemoActivity1 callled");
         MotionLayout motionLayout = findViewById(R.id.motionLayout);
 
         RecyclerView recyclerView = findViewById(R.id.recyclerview_front);
@@ -30,8 +26,5 @@ public class MainActivity extends AppCompatActivity {
         int debugMode = getIntent().getBooleanExtra("showPaths", false) ? MotionLayout.DEBUG_SHOW_PATH : MotionLayout.DEBUG_SHOW_NONE;
         motionLayout.setDebugMode(debugMode);
 
-        ViewPager2 viewPager2 = findViewById(R.id.view_pager);
-        ViewPagerAdapter adapter = new ViewPagerAdapter(this);
-        viewPager2.setAdapter(adapter);
     }
 }
