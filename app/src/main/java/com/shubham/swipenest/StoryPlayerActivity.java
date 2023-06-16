@@ -1,10 +1,16 @@
 package com.shubham.swipenest;
 
+import android.animation.ValueAnimator;
+import android.annotation.SuppressLint;
 import android.content.Intent;
 import android.graphics.drawable.Drawable;
+import android.media.MediaMetadataRetriever;
+import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
+import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
@@ -12,11 +18,11 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.VideoView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.constraintlayout.widget.ConstraintLayout;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.DataSource;
@@ -25,6 +31,7 @@ import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.Target;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,18 +40,13 @@ import jp.shts.android.storiesprogressview.StoriesProgressView;
 
 public class StoryPlayerActivity extends AppCompatActivity implements StoriesProgressView.StoriesListener {
 
-//    private final int[] ImageURls = {
-//            R.drawable.chocolates,
-//            R.drawable.bird,
-//            R.drawable.football
-//    };
-
     BottomSheetBehavior<View> bottomSheetBehavior;
+    private GestureDetector gestureDetector;
 
-    private List<Uri> ImageURls = new ArrayList<>();
+    private List<Uri> MediaUriList = new ArrayList<>();
     public StoryPlayerActivity(List<Uri> list){
-        ImageURls.clear();
-        ImageURls.addAll(list);
+        MediaUriList.clear();
+        MediaUriList.addAll(list);
     }
 
     public StoryPlayerActivity() {}
@@ -53,12 +55,19 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
     private final String[] storyTimes = {"15hr Ago", "8hr Ago", "9hr Ago"};
     private final String[] likeCounts = {"22K", "257", "6.8K"};
     private final String[] storyText = {"Tasty chocolate rolls", "Beautiful bird", "Amazing city"};
+    private final List<Boolean> isImageList = new ArrayList<>();
+    private Boolean isCallBackPosted = false;
+    private int currentPosition = 0;
 
     long pressTime = 0L;
     long limit = 500L;
 
     private StoriesProgressView storiesProgressView;
     private ImageView image;
+    private VideoView storyVideoView;
+    private MediaPlayer mediaPlayer;
+    private Handler handler;
+    private Runnable runnable;
 
     private CircleImageView profileImage;
     private TextView usernameTV;
@@ -98,6 +107,7 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
         }
     };
 
+    @SuppressLint("ClickableViewAccessibility")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -106,45 +116,48 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
 
         View bottomSheet = findViewById(R.id.bottomSheet);
         bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet);
-        btnBottomSheet = findViewById(R.id.btnBottomSheet);
+        image = findViewById(R.id.image);
+        storyVideoView = findViewById(R.id.story_video_view);
+        handler = new Handler();
 
-        bottomSheet.setOnTouchListener(new View.OnTouchListener() {
-            private float startY;
-            private boolean isMovingUp;
 
+        int initialWidth = image.getWidth(); // Initial width of the ImageView
+        int initialHeight = image.getHeight(); // Initial height of the ImageView
+        int targetWidth = 500; // Target width of the ImageView
+        int targetHeight = 500; // Target height of the ImageView
+
+        ValueAnimator animator = ValueAnimator.ofFloat(0, 1);
+        animator.setDuration(1000);
+        animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
             @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                Log.d("bottomSheetTouch", "onTouch called");
-                switch (event.getAction()) {
-                    case MotionEvent.ACTION_DOWN:
-                        startY = event.getRawY();
-                        isMovingUp = false;
-                        break;
-                    case MotionEvent.ACTION_MOVE:
-                        float y = event.getRawY();
-                        if (y < startY) {
-                            // Swiping up
-                            if (!isMovingUp) {
-                                isMovingUp = true;
-                                bottomSheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
-                            }
-                        } else if (y > startY) {
-                            // Swiping down
-                            if (isMovingUp) {
-                                isMovingUp = false;
-                                bottomSheetBehavior.setState(BottomSheetBehavior.STATE_HIDDEN);
-                            }
-                        }
-                        break;
-                }
-                return false;
+            public void onAnimationUpdate(ValueAnimator animation) {
+                float fraction = animation.getAnimatedFraction();
+
+                // Interpolate the width and height based on the fraction
+                int newWidth = (int) (initialWidth + (targetWidth - initialWidth) * fraction);
+                int newHeight = (int) (initialHeight + (targetHeight - initialHeight) * fraction);
+
+                // Update the size of the ImageView
+                image.getLayoutParams().width = newWidth;
+                image.getLayoutParams().height = newHeight;
+                image.requestLayout();
             }
         });
 
         bottomSheetBehavior.addBottomSheetCallback(new BottomSheetBehavior.BottomSheetCallback() {
             @Override
             public void onStateChanged(@NonNull View bottomSheet, int newState) {
-
+                if(newState == BottomSheetBehavior.STATE_EXPANDED){
+                    if(storyVideoView!=null && storyVideoView.isPlaying()){
+                        storyVideoView.pause();
+                        currentPosition = storyVideoView.getCurrentPosition();
+                    }
+                }
+                else if(newState == BottomSheetBehavior.STATE_COLLAPSED){
+                    if(storyVideoView!=null && !storyVideoView.isPlaying()){
+                        storyVideoView.start();
+                    }
+                }
             }
 
             @Override
@@ -153,28 +166,121 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
             }
         });
 
-        btnBottomSheet.setOnClickListener( view -> {
-            Log.d("uris" , "btnBottomSheet clicked");
-            if(bottomSheetBehavior.getState() == BottomSheetBehavior.STATE_EXPANDED){
-                bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+        gestureDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
+
+
+            @Override
+            public void onShowPress(@NonNull MotionEvent e) {
+                storiesProgressView.pause();
+                super.onShowPress(e);
             }
-            else bottomSheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
+
+            @Override
+            public boolean onSingleTapConfirmed(MotionEvent e) {
+                float xCoordinate = e.getX();
+                float storyWidth = image.getWidth();
+                if(xCoordinate < storyWidth/3){
+                    storiesProgressView.reverse();
+                    bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+                }
+                else if(xCoordinate > 3*storyWidth/4){
+                    storiesProgressView.skip();
+                    bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+                }
+                return super.onSingleTapConfirmed(e);
+            }
+
+            @Override
+            public boolean onFling(MotionEvent e1, MotionEvent e2, float velocityX, float velocityY) {
+                float deltaX = e2.getX() - e1.getX();
+                float deltaY = e2.getY() - e1.getY();
+
+                if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                    // Horizontal swipe
+                    if (deltaX > 0) {
+                        // Swipe to the right
+                        // Handle going to the previous story
+                        return true;
+                    } else {
+                        // Swipe to the left
+                        // Handle going to the next story
+                        return true;
+                    }
+                } else {
+                    // Vertical swipe
+                    if (deltaY > 0) {
+                        // Swipe down
+                        if (bottomSheetBehavior.getState() == BottomSheetBehavior.STATE_EXPANDED) {
+                            // Handle closing the bottom sheet and resuming the story playback
+                            bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+                            storiesProgressView.resume();
+                            return true;
+                        }
+                    } else {
+                        // Swipe up
+                        if (bottomSheetBehavior.getState() == BottomSheetBehavior.STATE_COLLAPSED) {
+                            // Handle opening the bottom sheet and pausing the story playback
+                            bottomSheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
+                            //animator.start();
+                            storiesProgressView.pause();
+                            return true;
+                        }
+                    }
+                }
+
+                return false;
+            }
         });
 
         List<Uri> list = getIntent().getParcelableArrayListExtra("uriList");
-        ImageURls.clear();
-        ImageURls.addAll(list);
-        Log.d("uris", "uri list size in story player activity " + ImageURls.size());
-        // inside in create method below line is use to make a full screen.
+        MediaUriList.clear();
+        MediaUriList.addAll(list);
+        Log.d("uris", "uri list size in story player activity " + MediaUriList.size());
+        Log.d("uris" , "video uri is " + MediaUriList.get(0));
+
+        long [] durationList = new long[MediaUriList.size()];
+        for(int i = 0; i<MediaUriList.size(); i++){
+            Uri uri = MediaUriList.get(i);
+            String[] uriList = uri.toString().split("\\.");
+            if(
+                    uriList[uriList.length-1].equals("mp4")
+                            || uriList[uriList.length-1].equals("avi")
+                            || uriList[uriList.length-1].equals("mkv")
+                            || uriList[uriList.length-1].equals("mov")
+                            || uriList[uriList.length-1].equals("wmv")
+                            || uriList[uriList.length-1].equals("flv")
+                            || uriList[uriList.length-1].equals("webm")
+            ){
+                isImageList.add(false);
+                try {
+                    long duration = getVideoDuration(uri);
+                    Log.d("uris", "duration from getVideoDurationMethod " + duration);
+                    if(duration > 30000){
+                        durationList[i] = 30000;
+                    }
+                    else durationList[i] = duration;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    durationList[i] = 3000L;
+                }
+            }
+            else {
+                isImageList.add(true);
+                durationList[i] = 3000L;
+            }
+        }
 
         // on below line we are initializing our variables.
         storiesProgressView = (StoriesProgressView) findViewById(R.id.stories);
 
         // on below line we are setting the total count for our stories.
-        storiesProgressView.setStoriesCount(ImageURls.size());
+        storiesProgressView.setStoriesCount(MediaUriList.size());
 
+        for(long i : durationList){
+            Log.d("uris" , "duration is " + i);
+        }
         // on below line we are setting story duration for each story.
-        storiesProgressView.setStoryDuration(3000L);
+        storiesProgressView.setStoriesCountWithDurations(durationList);
 
         // on below line we are calling a method for set
         // on story listener and passing context to it.
@@ -189,70 +295,46 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
         profileImage = findViewById(R.id.profile_image);
         usernameTV = findViewById(R.id.usernameTV);
         storyTimeTV = findViewById(R.id.storyTimeTV);
-        likeCountTV = findViewById(R.id.likeCountTV);
-        storyTTV = findViewById(R.id.storyTTV);
-        btnBottomSheet = findViewById(R.id.btnBottomSheet);
-        btnBottomSheet.setOnClickListener(view -> {
-
-        });
 
         // on below line we are setting image to our image view.
-        glideImage(ImageURls.get(counter),usernames[0],storyTimes[0],likeCounts[0],storyText[0]);
+        setUpStory(MediaUriList.get(counter), isImageList.get(counter) , usernames[0],storyTimes[0],likeCounts[0],storyText[0]);
 
-        // below is the view for going to the previous story.
-        // initializing our previous view.
-        View reverse = findViewById(R.id.reverse);
-
-        // adding on click listener for our reverse view.
-        reverse.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // inside on click we are
-                // reversing our progress view.
-                storiesProgressView.reverse();
-            }
-        });
-
-        // on below line we are calling a set on touch
-        // listener method to move towards previous image.
-        reverse.setOnTouchListener(onTouchListener);
-
-        // on below line we are initializing
-        // view to skip a specific story.
-        View skip = findViewById(R.id.skip);
-        skip.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // inside on click we are
-                // skipping the story progress view.
-                storiesProgressView.skip();
-            }
-        });
-        // on below line we are calling a set on touch
-        // listener method to move to next story.
-        skip.setOnTouchListener(onTouchListener);
     }
 
     @Override
     public void onNext() {
         // this method is called when we move
         // to next progress view of story.
-        glideImage(ImageURls.get(++counter),usernames[0],storyTimes[0],likeCounts[0],storyText[0]);
+        currentPosition = 0;
+        if(isCallBackPosted){
+            handler.removeCallbacks(runnable);
+            isCallBackPosted = false;
+        }
+        setUpStory(MediaUriList.get(++counter), isImageList.get(counter),usernames[0],storyTimes[0],likeCounts[0],storyText[0]);
     }
 
     @Override
     public void onPrev() {
-
+        currentPosition = 0;
+        if(isCallBackPosted){
+            handler.removeCallbacks(runnable);
+            isCallBackPosted = false;
+        }
         // this method id called when we move to previous story.
         // on below line we are decreasing our counter
         if ((counter - 1) < 0) return;
-        glideImage(ImageURls.get(--counter),usernames[0],storyTimes[0],likeCounts[0],storyText[0]);
+        setUpStory(MediaUriList.get(--counter), isImageList.get(counter), usernames[0],storyTimes[0],likeCounts[0],storyText[0]);
 
         // on below line we are setting image to image view
     }
 
     @Override
     public void onComplete() {
+        currentPosition = 0;
+        if(isCallBackPosted){
+            handler.removeCallbacks(runnable);
+            isCallBackPosted = false;
+        }
         // when the stories are completed this method is called.
         // in this method we are moving back to initial main activity.
         Intent i = new Intent(StoryPlayerActivity.this, MainActivity.class);
@@ -262,35 +344,98 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
 
     @Override
     protected void onDestroy() {
+        if(isCallBackPosted){
+            handler.removeCallbacks(runnable);
+            isCallBackPosted = false;
+        }
         // in on destroy method we are destroying
         // our stories progress view.
         storiesProgressView.destroy();
         super.onDestroy();
     }
 
-    private void glideImage(Uri URL, String username, String time, String like, String storyText)
-    {
-        Glide.with(this)
-                .load(URL)
-                .listener(new RequestListener<Drawable>() {
-                    @Override
-                    public boolean onLoadFailed(@Nullable GlideException e, Object model, Target<Drawable> target, boolean isFirstResource) {
-                        Toast.makeText(StoryPlayerActivity.this, "Failed to load image.", Toast.LENGTH_SHORT).show();
-                        return false;
-                    }
-
-                    @Override
-                    public boolean onResourceReady(Drawable resource, Object model, Target<Drawable> target, DataSource dataSource, boolean isFirstResource) {
-                        return false;
-                    }
-                })
-                .into(image);
-
-        usernameTV.setText(username);
-        storyTimeTV.setText(time);
-        likeCountTV.setText(like);
-        storyTTV.setText(storyText);
-
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        if(event.getAction() == MotionEvent.ACTION_UP){
+            storiesProgressView.resume();
+        }
+        return gestureDetector.onTouchEvent(event);
     }
 
+    private void setUpStory(Uri uri, Boolean isImage, String username, String time, String like, String storyText)
+    {
+        if(!isImage) {
+            image.setVisibility(View.GONE);
+            storyVideoView.setVisibility(View.VISIBLE);
+            storyVideoView.setVideoURI(uri);
+            storyVideoView.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+                @Override
+                public void onPrepared(MediaPlayer mp) {
+                    mediaPlayer = mp;
+                    storyVideoView.seekTo(currentPosition);
+                    // play only the first 30 seconds
+                    int duration = mediaPlayer.getDuration();
+                    int playbackPosition = 30000;
+                    if(duration > playbackPosition){
+                        mediaPlayer.seekTo(playbackPosition);
+                    }
+
+                    storyVideoView.start();
+
+                    // stopping after 30 seconds
+                    runnable = () -> {
+                        if(storyVideoView.isPlaying()){
+                            storyVideoView.stopPlayback();
+                        }
+                        Log.d("uris" , "skipping the story");
+                        storiesProgressView.skip();
+                    };
+                    handler.postDelayed(runnable, playbackPosition);
+                    isCallBackPosted = true;
+                }
+            });
+        }
+        else {
+            storyVideoView.setVisibility(View.GONE);
+            image.setVisibility(View.VISIBLE);
+            Log.d("uris" , "image uri before using glide " + uri);
+            Glide.with(this)
+                    .load(uri)
+                    .listener(new RequestListener<Drawable>() {
+                        @Override
+                        public boolean onLoadFailed(@Nullable GlideException e, Object model, Target<Drawable> target, boolean isFirstResource) {
+                            Toast.makeText(StoryPlayerActivity.this, "Failed to load image.", Toast.LENGTH_SHORT).show();
+                            return false;
+                        }
+
+                        @Override
+                        public boolean onResourceReady(Drawable resource, Object model, Target<Drawable> target, DataSource dataSource, boolean isFirstResource) {
+                            return false;
+                        }
+                    })
+                    .into(image);
+        }
+    }
+
+    private Long getVideoDuration(Uri uri) throws IOException {
+        MediaMetadataRetriever retriever = new MediaMetadataRetriever();
+        try {
+            retriever.setDataSource(getApplicationContext(), uri);
+
+            // Get the duration in milliseconds
+            String duration = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
+
+            // Convert duration from milliseconds to seconds
+            long durationInMillis = Long.parseLong(duration);
+
+            return durationInMillis;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            retriever.release();
+        }
+
+        return 0L;
+    }
 }

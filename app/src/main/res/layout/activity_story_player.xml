@@ -7,8 +7,6 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     tools:context=".StoryPlayerActivity">
 
-    <include layout="@layout/viewers_bottom_sheet"/>
-
     <!--below is the image view where we will
         be displaying images in our stories-->
     <ImageView
@@ -16,31 +14,12 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="#303030"
-        android:contentDescription="@null"
-        tools:src="@drawable/c1" />
+        android:contentDescription="@null" />
 
-    <!--on below line we are creating
-        linear layout for our views-->
-    <LinearLayout
+    <VideoView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="horizontal">
-
-        <!--view to handle move to previous image-->
-        <View
-            android:id="@+id/reverse"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1" />
-
-        <!--view to move to the next image-->
-        <View
-            android:id="@+id/skip"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1" />
-
-    </LinearLayout>
+        android:id="@+id/story_video_view" />
 
     <!--below widget is use to create indicator for our stories at top-->
     <jp.shts.android.storiesprogressview.StoriesProgressView
@@ -100,71 +79,6 @@
 
     </LinearLayout>
 
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="10dp"
-        android:layout_marginEnd="10dp"
-        android:gravity="center"
-        android:padding="10dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:visibility="gone"
-        android:background="@drawable/bg_ttv"
-        android:layout_alignBottom="@id/image"
-        android:layout_centerInParent="true"
-        android:layout_marginBottom="60dp">
-
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
-            android:gravity="center"
-            android:orientation="vertical">
-
-            <ImageView
-                android:layout_width="50dp"
-                android:layout_height="50dp"
-                android:scaleType="fitXY"
-                android:clickable="true"
-                android:focusable="true"
-                android:padding="8dp"
-                android:src="@drawable/ic_heart"
-                android:background="@drawable/bg_ttv2"/>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:id="@+id/likeCountTV"
-                android:text="22.5K"
-                android:textColor="#FF7067"
-                android:textSize="12sp"/>
-
-        </LinearLayout>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:id="@+id/storyTTV"
-            android:layout_gravity="center"
-            android:gravity="center"
-            android:layout_marginStart="10dp"
-            android:layout_marginEnd="10dp"
-            android:text="Powerpuff girl is a very famous cartoon in US."
-            android:textSize="20sp"
-            android:textColor="@color/black"/>
-
-    </LinearLayout>
-
-    <Button
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="open bottom sheet"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        android:layout_marginBottom="15dp"
-        android:id="@+id/btnBottomSheet"/>
+    <include layout="@layout/viewers_bottom_sheet"/>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
