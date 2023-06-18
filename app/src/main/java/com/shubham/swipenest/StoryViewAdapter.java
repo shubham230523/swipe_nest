@@ -41,8 +41,8 @@ public class StoryViewAdapter extends RecyclerView.Adapter<StoryViewAdapter.Stor
         holder.frameLayout.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Intent intent = new Intent(view.getContext(), StoryPlayerActivity.class);
-                view.getContext().startActivity(intent);
+//                Intent intent = new Intent(view.getContext(), StoryPlayerActivity.class);
+//                view.getContext().startActivity(intent);
             }
         });
     }

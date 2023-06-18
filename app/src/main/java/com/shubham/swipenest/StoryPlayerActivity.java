@@ -13,7 +13,9 @@ import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.view.animation.AccelerateDecelerateInterpolator;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
@@ -23,6 +25,8 @@ import android.widget.VideoView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.DataSource;
@@ -65,6 +69,7 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
     private StoriesProgressView storiesProgressView;
     private ImageView image;
     private VideoView storyVideoView;
+    View bottomSheet;
     private MediaPlayer mediaPlayer;
     private Handler handler;
     private Runnable runnable;
@@ -75,6 +80,10 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
     private TextView likeCountTV;
     private TextView storyTTV;
     private Button btnBottomSheet;
+    private ImageView btnStoryClose;
+    private List<Viewers> viewsList = new ArrayList<>();
+    private int halfExpandedHeight;
+    private int screenHeight;
 
     private int counter = 0;
 
@@ -114,12 +123,41 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
         setContentView(R.layout.activity_story_player);
 
-        View bottomSheet = findViewById(R.id.bottomSheet);
+        bottomSheet = findViewById(R.id.bottomSheet);
         bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet);
+
+        screenHeight = getResources().getDisplayMetrics().heightPixels;
+        halfExpandedHeight = screenHeight / 2;
+
+        bottomSheetBehavior.setPeekHeight(0);
+        //collapseBottomSheet();
+//        bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+
+        RecyclerView rvViewers = bottomSheet.findViewById(R.id.rvStoryViewers);
+        viewsList.add(new Viewers(R.drawable.chocolates, "user1"));
+        viewsList.add(new Viewers(R.drawable.chocolates, "user2"));
+        viewsList.add(new Viewers(R.drawable.chocolates, "user3"));
+        viewsList.add(new Viewers(R.drawable.chocolates, "user4"));
+        viewsList.add(new Viewers(R.drawable.chocolates, "user5"));
+        viewsList.add(new Viewers(R.drawable.chocolates, "user6"));
+        viewsList.add(new Viewers(R.drawable.chocolates, "user7"));
+        viewsList.add(new Viewers(R.drawable.chocolates, "user8"));
+        viewsList.add(new Viewers(R.drawable.chocolates, "user9"));
+        viewsList.add(new Viewers(R.drawable.chocolates, "user10"));
+        ViewersAdapter viewsAdapter = new ViewersAdapter(viewsList);
+        rvViewers.setLayoutManager(new LinearLayoutManager(this,LinearLayoutManager.VERTICAL,false));
+        rvViewers.setAdapter(viewsAdapter);
+
         image = findViewById(R.id.image);
         storyVideoView = findViewById(R.id.story_video_view);
+        btnStoryClose = findViewById(R.id.btnStoryClose);
         handler = new Handler();
 
+        btnStoryClose.setOnClickListener(view -> {
+            Intent i = new Intent(StoryPlayerActivity.this, MainActivity.class);
+            startActivity(i);
+            finish();
+        });
 
         int initialWidth = image.getWidth(); // Initial width of the ImageView
         int initialHeight = image.getHeight(); // Initial height of the ImageView
@@ -148,12 +186,14 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
             @Override
             public void onStateChanged(@NonNull View bottomSheet, int newState) {
                 if(newState == BottomSheetBehavior.STATE_EXPANDED){
+                    storiesProgressView.pause();
                     if(storyVideoView!=null && storyVideoView.isPlaying()){
                         storyVideoView.pause();
                         currentPosition = storyVideoView.getCurrentPosition();
                     }
                 }
                 else if(newState == BottomSheetBehavior.STATE_COLLAPSED){
+                    storiesProgressView.resume();
                     if(storyVideoView!=null && !storyVideoView.isPlaying()){
                         storyVideoView.start();
                     }
@@ -181,11 +221,13 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
                 float storyWidth = image.getWidth();
                 if(xCoordinate < storyWidth/3){
                     storiesProgressView.reverse();
-                    bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+                    collapseBottomSheet();
+//                    bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
                 }
                 else if(xCoordinate > 3*storyWidth/4){
                     storiesProgressView.skip();
-                    bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+                    collapseBottomSheet();
+//                    bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
                 }
                 return super.onSingleTapConfirmed(e);
             }
@@ -212,7 +254,8 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
                         // Swipe down
                         if (bottomSheetBehavior.getState() == BottomSheetBehavior.STATE_EXPANDED) {
                             // Handle closing the bottom sheet and resuming the story playback
-                            bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+                            collapseBottomSheet();
+//                            bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
                             storiesProgressView.resume();
                             return true;
                         }
@@ -220,7 +263,8 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
                         // Swipe up
                         if (bottomSheetBehavior.getState() == BottomSheetBehavior.STATE_COLLAPSED) {
                             // Handle opening the bottom sheet and pausing the story playback
-                            bottomSheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
+                            expandBottomSheet();
+//                            bottomSheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
                             //animator.start();
                             storiesProgressView.pause();
                             return true;
@@ -230,6 +274,12 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
 
                 return false;
             }
+        });
+
+        // bottom sheet delete icon
+        ImageView btnDeleteStory = bottomSheet.findViewById(R.id.btnDelete);
+        btnDeleteStory.setOnClickListener(view -> {
+            finish();
         });
 
         List<Uri> list = getIntent().getParcelableArrayListExtra("uriList");
@@ -437,5 +487,41 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
         }
 
         return 0L;
+    }
+
+    private void expandBottomSheet() {
+        ValueAnimator animator = ValueAnimator.ofInt(0, halfExpandedHeight);
+        animator.setInterpolator(new AccelerateDecelerateInterpolator());
+        animator.setDuration(300);
+        animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                int value = (int) animation.getAnimatedValue();
+                setBottomSheetHeight(value);
+            }
+        });
+        animator.start();
+        bottomSheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
+    }
+
+    private void collapseBottomSheet() {
+        ValueAnimator animator = ValueAnimator.ofInt(halfExpandedHeight, 0);
+        animator.setInterpolator(new AccelerateDecelerateInterpolator());
+        animator.setDuration(300);
+        animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
+            @Override
+            public void onAnimationUpdate(ValueAnimator animation) {
+                int value = (int) animation.getAnimatedValue();
+                setBottomSheetHeight(value);
+            }
+        });
+        animator.start();
+        bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
+    }
+
+    private void setBottomSheetHeight(int height) {
+        ViewGroup.LayoutParams layoutParams = bottomSheet.getLayoutParams();
+        layoutParams.height = height;
+        bottomSheet.setLayoutParams(layoutParams);
     }
 }
