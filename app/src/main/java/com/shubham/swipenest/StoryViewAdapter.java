@@ -5,6 +5,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -12,9 +13,11 @@ import androidx.recyclerview.widget.RecyclerView;
 
 public class StoryViewAdapter extends RecyclerView.Adapter<StoryViewAdapter.StoryViewHolder> {
 
+    OnClickListener onClickListener;
     String[] usernameList;
-    public StoryViewAdapter(String[] usernameList) {
+    public StoryViewAdapter(String[] usernameList, OnClickListener clickListener) {
         this.usernameList = usernameList;
+        this.onClickListener = clickListener;
     }
 
 //    private final String[] ImageURls = {"https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/11.png",
@@ -38,12 +41,9 @@ public class StoryViewAdapter extends RecyclerView.Adapter<StoryViewAdapter.Stor
     @Override
     public void onBindViewHolder(@NonNull StoryViewHolder holder, int position) {
         holder.username.setText(usernameList[position]);
-        holder.frameLayout.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-//                Intent intent = new Intent(view.getContext(), StoryPlayerActivity.class);
-//                view.getContext().startActivity(intent);
-            }
+        if(position == 0) holder.plusIcon.setVisibility(View.VISIBLE);
+        holder.frameLayout.setOnClickListener(view -> {
+            onClickListener.onClick(position, holder);
         });
     }
 
@@ -55,11 +55,13 @@ public class StoryViewAdapter extends RecyclerView.Adapter<StoryViewAdapter.Stor
     public static class StoryViewHolder extends RecyclerView.ViewHolder
     {
         TextView username;
+        ImageView plusIcon;
         FrameLayout frameLayout;
         public StoryViewHolder(@NonNull View itemView) {
             super(itemView);
             username = itemView.findViewById(R.id.username);
             frameLayout = itemView.findViewById(R.id.frameLayout);
+            plusIcon = itemView.findViewById(R.id.imageView);
         }
     }
 

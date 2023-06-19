@@ -154,8 +154,6 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
         handler = new Handler();
 
         btnStoryClose.setOnClickListener(view -> {
-            Intent i = new Intent(StoryPlayerActivity.this, MainActivity.class);
-            startActivity(i);
             finish();
         });
 
@@ -279,6 +277,8 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
         // bottom sheet delete icon
         ImageView btnDeleteStory = bottomSheet.findViewById(R.id.btnDelete);
         btnDeleteStory.setOnClickListener(view -> {
+            Intent i = new Intent(StoryPlayerActivity.this, MainActivity.class);
+            startActivity(i);
             finish();
         });
 
@@ -406,7 +406,7 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if(event.getAction() == MotionEvent.ACTION_UP){
+        if(event.getAction() == MotionEvent.ACTION_UP && bottomSheetBehavior.getState()!=BottomSheetBehavior.STATE_EXPANDED){
             storiesProgressView.resume();
         }
         return gestureDetector.onTouchEvent(event);

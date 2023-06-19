@@ -45,9 +45,10 @@ import pl.aprilapps.easyphotopicker.EasyImage;
 import pl.aprilapps.easyphotopicker.MediaFile;
 import pl.aprilapps.easyphotopicker.MediaSource;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements OnClickListener{
 
     RecyclerView storyViewRV;
+    ImageView plusIcon;
     String[] usernameList = {"Shubham","Omkar","Vikas","Akash","Tushar"};
     String[] mimeTypes = {"image/*", "video/*"};
     List<Uri> selectedMediaUris = new ArrayList<>();
@@ -59,27 +60,8 @@ public class MainActivity extends AppCompatActivity {
 
         storyViewRV = findViewById(R.id.storyViewRV);
         storyViewRV.setLayoutManager(new LinearLayoutManager(this,LinearLayoutManager.HORIZONTAL,false));
-        storyViewRV.setAdapter(new StoryViewAdapter(usernameList));
+        storyViewRV.setAdapter(new StoryViewAdapter(usernameList, this));
 
-        // self story
-        View selfStoryView = findViewById(R.id.self_story);
-        ImageView plusIcon = selfStoryView.findViewById(R.id.imageView);
-        plusIcon.setVisibility(View.VISIBLE);
-        selfStoryView.findViewById(R.id.frameLayout).setOnClickListener(view -> {
-            if(plusIcon.getVisibility() == View.VISIBLE){
-                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                intent.setType("*/*"); // Set the general type to allow any file type
-                intent.putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes); // Specify the allowed MIME types
-                intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-                receiveData.launch(intent);
-                plusIcon.setVisibility(View.INVISIBLE);
-            }
-            else {
-                Intent intent = new Intent(view.getContext(), StoryPlayerActivity.class);
-                intent.putParcelableArrayListExtra("uriList", new ArrayList<>(selectedMediaUris));
-                startActivity(intent);
-            }
-        });
     }
 
     private final ActivityResultLauncher<Intent> receiveData = registerForActivityResult(
@@ -153,5 +135,24 @@ public class MainActivity extends AppCompatActivity {
             fileName = uri.getLastPathSegment();
         }
         return fileName;
+    }
+
+    @Override
+    public void onClick(int position, StoryViewAdapter.StoryViewHolder viewHolder) {
+        if(position == 0){
+            if(selectedMediaUris.isEmpty()){
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.setType("*/*"); // Set the general type to allow any file type
+                intent.putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes); // Specify the allowed MIME types
+                intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                receiveData.launch(intent);
+                viewHolder.plusIcon.setVisibility(View.INVISIBLE);
+            }
+            else {
+                Intent intent = new Intent(getApplicationContext(), StoryPlayerActivity.class);
+                intent.putParcelableArrayListExtra("uriList", new ArrayList<>(selectedMediaUris));
+                startActivity(intent);
+            }
+        }
     }
 }

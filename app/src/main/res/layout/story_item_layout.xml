@@ -62,7 +62,7 @@
         android:layout_height="35dp"
         android:layout_marginStart="70dp"
         android:layout_marginBottom="25dp"
-        android:visibility="gone"
+        android:visibility="invisible"
         android:background="@drawable/ic_add"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
