@@ -48,8 +48,10 @@ dependencies {
     implementation 'de.hdodenhof:circleimageview:3.1.0'
 
     // images and video picker
-    //implementation 'com.github.Mindinventory:Lassi:1.2.0'
     implementation 'com.github.jkwiecien:EasyImage:3.2.0'
+
+    // material dependency
+    implementation 'com.google.android.material:material:1.9.0'
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
