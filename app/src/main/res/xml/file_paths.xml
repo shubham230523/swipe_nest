@@ -1,4 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
     <cache-path name="my_cache" path="/" />
+    <external-files-path
+        name="external_pictures_path"
+        path="Pictures"/>
+    <external-files-path
+        name="external_videos_path"
+        path="Movies"/>
 </paths>

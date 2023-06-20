@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:padding="20dp"
+    android:layout_height="wrap_content">
+
+    <!-- capture image -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:id="@+id/llCaptureImage"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <ImageView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_camera"
+            android:id="@+id/ivCamera"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/tvCamera"
+            android:layout_gravity="center_vertical"
+            android:textSize="16sp"
+            android:text="Capture image"
+            android:layout_marginStart="15dp" />
+
+    </LinearLayout>
+
+    <!-- record a video -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="15dp"
+        android:id="@+id/llRecordVideo"
+        app:layout_constraintTop_toBottomOf="@id/llCaptureImage"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <!-- Record video -->
+        <ImageView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_video"
+            android:id="@+id/ivVideo"
+            app:tint="@color/black" />
+
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/tvVideo"
+            android:textSize="16sp"
+            android:layout_gravity="center_vertical"
+            android:text="Record video"
+            android:layout_marginStart="16dp" />
+
+    </LinearLayout>
+
+    <!-- select a image -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="15dp"
+        android:id="@+id/llSelectMedia"
+        app:layout_constraintTop_toBottomOf="@id/llRecordVideo"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <ImageView
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:src="@drawable/ic_select_img"
+            android:id="@+id/ivSelectImg"
+            app:tint="@color/black" />
+
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/tvSelectImage"
+            android:textSize="16sp"
+            android:layout_gravity="center_vertical"
+            android:text="Select image or video"
+            android:layout_marginStart="16dp" />
+
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
