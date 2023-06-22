@@ -1,4 +1,4 @@
-package com.shubham.swipenest;
+package com.shubham.swipenest.bottomSheet;
 
 import android.app.Dialog;
 import android.graphics.Color;
@@ -25,6 +25,7 @@ import android.widget.Toast;
 
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
+import com.shubham.swipenest.R;
 
 public class ModalBottomSheetFragment extends BottomSheetDialogFragment {
 

@@ -1,6 +1,5 @@
-package com.shubham.swipenest;
+package com.shubham.swipenest.story;
 
-import android.content.Intent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,6 +9,9 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.shubham.swipenest.utils.OnClickListener;
+import com.shubham.swipenest.R;
 
 public class StoryViewAdapter extends RecyclerView.Adapter<StoryViewAdapter.StoryViewHolder> {
 
@@ -41,7 +43,7 @@ public class StoryViewAdapter extends RecyclerView.Adapter<StoryViewAdapter.Stor
     @Override
     public void onBindViewHolder(@NonNull StoryViewHolder holder, int position) {
         holder.username.setText(usernameList[position]);
-        if(position == 0) holder.plusIcon.setVisibility(View.VISIBLE);
+//        if(position == 0) holder.plusIcon.setVisibility(View.VISIBLE);
         holder.frameLayout.setOnClickListener(view -> {
             onClickListener.onClick(position, holder);
         });
@@ -55,7 +57,7 @@ public class StoryViewAdapter extends RecyclerView.Adapter<StoryViewAdapter.Stor
     public static class StoryViewHolder extends RecyclerView.ViewHolder
     {
         TextView username;
-        ImageView plusIcon;
+        public ImageView plusIcon;
         FrameLayout frameLayout;
         public StoryViewHolder(@NonNull View itemView) {
             super(itemView);

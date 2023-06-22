@@ -1,18 +1,11 @@
-package com.shubham.swipenest;
+package com.shubham.swipenest.bottomSheet;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.fragment.app.DialogFragment;
 
 import android.os.Bundle;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.ImageView;
-import android.widget.Toast;
 
-import com.google.android.material.bottomsheet.BottomSheetBehavior;
-import com.google.android.material.bottomsheet.BottomSheetDialog;
-import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
+import com.shubham.swipenest.R;
 
 public class ModalBottomSheetActivity extends AppCompatActivity {
 

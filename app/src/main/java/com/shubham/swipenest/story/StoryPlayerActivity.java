@@ -1,4 +1,4 @@
-package com.shubham.swipenest;
+package com.shubham.swipenest.story;
 
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
@@ -34,6 +34,8 @@ import com.bumptech.glide.load.engine.GlideException;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.Target;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
+import com.shubham.swipenest.R;
+import com.shubham.swipenest.model.Viewers;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -387,8 +389,6 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
         }
         // when the stories are completed this method is called.
         // in this method we are moving back to initial main activity.
-        Intent i = new Intent(StoryPlayerActivity.this, MainActivity.class);
-        startActivity(i);
         finish();
     }
 
@@ -418,31 +418,28 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
             image.setVisibility(View.GONE);
             storyVideoView.setVisibility(View.VISIBLE);
             storyVideoView.setVideoURI(uri);
-            storyVideoView.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-                @Override
-                public void onPrepared(MediaPlayer mp) {
-                    mediaPlayer = mp;
-                    storyVideoView.seekTo(currentPosition);
-                    // play only the first 30 seconds
-                    int duration = mediaPlayer.getDuration();
-                    int playbackPosition = 30000;
-                    if(duration > playbackPosition){
-                        mediaPlayer.seekTo(playbackPosition);
-                    }
-
-                    storyVideoView.start();
-
-                    // stopping after 30 seconds
-                    runnable = () -> {
-                        if(storyVideoView.isPlaying()){
-                            storyVideoView.stopPlayback();
-                        }
-                        Log.d("uris" , "skipping the story");
-                        storiesProgressView.skip();
-                    };
-                    handler.postDelayed(runnable, playbackPosition);
-                    isCallBackPosted = true;
+            storyVideoView.setOnPreparedListener(mp -> {
+                mediaPlayer = mp;
+                storyVideoView.seekTo(currentPosition);
+                // play only the first 30 seconds
+                int duration = mediaPlayer.getDuration();
+                int playbackPosition = 30000;
+                if(duration > playbackPosition){
+                    mediaPlayer.seekTo(playbackPosition);
                 }
+
+                storyVideoView.start();
+
+                // stopping after 30 seconds
+                runnable = () -> {
+                    if(storyVideoView.isPlaying()){
+                        storyVideoView.stopPlayback();
+                    }
+                    Log.d("uris" , "skipping the story");
+                    storiesProgressView.skip();
+                };
+                handler.postDelayed(runnable, playbackPosition);
+                isCallBackPosted = true;
             });
         }
         else {

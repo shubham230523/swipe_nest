@@ -1,4 +1,4 @@
-package com.shubham.swipenest;
+package com.shubham.swipenest.model;
 
 public class Viewers {
     public int profileImg;

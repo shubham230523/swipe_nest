@@ -1,4 +1,4 @@
-package com.shubham.swipenest;
+package com.shubham.swipenest.utils;
 
 import java.io.IOException;
 import java.io.InputStream;

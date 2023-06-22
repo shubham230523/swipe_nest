@@ -1,4 +1,4 @@
-package com.shubham.swipenest;
+package com.shubham.swipenest.story;
 
 import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultCallback;
@@ -38,6 +38,13 @@ import android.widget.Toast;
 //import com.lassi.presentation.builder.Lassi;
 //import com.lassi.presentation.cropper.CropImageView;
 
+import com.shubham.swipenest.story.homeScreen.fragments.FragmentPreviewListener;
+import com.shubham.swipenest.story.homeScreen.fragments.HomeScreenStoriesFragment;
+import com.shubham.swipenest.story.homeScreen.fragments.PickedMediaPreviewFragment;
+import com.shubham.swipenest.utils.OnClickListener;
+import com.shubham.swipenest.R;
+import com.shubham.swipenest.utils.StreamUtils;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -48,7 +55,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-public class MainActivity extends AppCompatActivity implements OnClickListener{
+public class MainActivity extends AppCompatActivity implements OnClickListener, FragmentPreviewListener {
 
     RecyclerView storyViewRV;
     ImageView plusIcon;
@@ -65,9 +72,15 @@ public class MainActivity extends AppCompatActivity implements OnClickListener{
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        storyViewRV = findViewById(R.id.storyViewRV);
-        storyViewRV.setLayoutManager(new LinearLayoutManager(this,LinearLayoutManager.HORIZONTAL,false));
-        storyViewRV.setAdapter(new StoryViewAdapter(usernameList, this));
+        HomeScreenStoriesFragment fragment = HomeScreenStoriesFragment.newInstance(this);
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.fragment_container, fragment, "storiesFragment")
+                .addToBackStack("storiesFragment")
+                .commit();
+
+//        storyViewRV = findViewById(R.id.storyViewRV);
+//        storyViewRV.setLayoutManager(new LinearLayoutManager(this,LinearLayoutManager.HORIZONTAL,false));
+//        storyViewRV.setAdapter(new StoryViewAdapter(usernameList, this));
 
     }
 
@@ -101,11 +114,9 @@ public class MainActivity extends AppCompatActivity implements OnClickListener{
                                     e.printStackTrace();
                                 }
                             }
-                            Log.d("uris", selectedMediaUris.toString());
                         } else if (intent.getData() != null) {
                             // Single item selected
                             Uri mediaUri = intent.getData();
-                            Log.d("uris", "media uri: " + mediaUri);
                             try {
                                 ParcelFileDescriptor parcelFileDescriptor = getContentResolver().openFileDescriptor(mediaUri, "r", null);
                                 if(parcelFileDescriptor!=null){
@@ -125,12 +136,10 @@ public class MainActivity extends AppCompatActivity implements OnClickListener{
                     }
                     else if(imageFile!=null){
                         Uri uri = FileProvider.getUriForFile(MainActivity.this, "com.shubham.swipenest.fileprovider", imageFile);
-                        Log.d("uris" , "Captured image uri  " + uri);
                         selectedMediaUris.add(uri);
                     }
                     else if(videoFile!=null){
                         Uri uri = FileProvider.getUriForFile(MainActivity.this, "com.shubham.swipenest.fileprovider", videoFile);
-                        Log.d("uris" , "Capured video uri " + uri);
                         selectedMediaUris.add(uri);
                     }
                 }
@@ -232,50 +241,6 @@ public class MainActivity extends AppCompatActivity implements OnClickListener{
                 intent.putParcelableArrayListExtra("uriList", new ArrayList<>(selectedMediaUris));
                 startActivity(intent);
             }
-
-
-//            if(selectedMediaUris.isEmpty()){
-////                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-////                intent.setType("*/*"); // Set the general type to allow any file type
-////                intent.putExtra(Intent.EXTRA_MIME_TYPES, mimeTypes); // Specify the allowed MIME types
-////                intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
-//
-//                try{
-//// Create the capture image intent
-//                    captureImageIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-//                    Uri uri = FileProvider.getUriForFile(MainActivity.this, "com.shubham.swipenest.fileprovider", createImageFile());
-//                    captureImageIntent.putExtra(MediaStore.EXTRA_OUTPUT, uri);
-//                    if(ContextCompat.checkSelfPermission(this,  android.Manifest.permission.CAMERA)!= PackageManager.PERMISSION_GRANTED){
-//                        permissions = new String[]{Manifest.permission.CAMERA};
-//                        permissionLauncher.launch(permissions);
-//                    }
-//                    else {
-//                        receiveData.launch(captureImageIntent);
-//                    }
-//
-////// Create the capture video intent
-////                    Intent captureVideoIntent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
-////                    captureVideoIntent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(createImageFile()));
-////
-////// Create the pick intent for both images and videos
-////                    Intent pickIntent = new Intent(Intent.ACTION_GET_CONTENT);
-////                    pickIntent.setType("image/* video/*");
-////
-////// Create the chooser intent and add the capture and pick intents to it
-////                    Intent chooserIntent = Intent.createChooser(new Intent(), "Select Image or Video");
-////                    chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, new Intent[]{captureImageIntent, captureVideoIntent, pickIntent});
-////
-////
-////                    receiveData.launch(chooserIntent);
-//
-//                }catch (IOException exception){
-//
-//                }
-//                viewHolder.plusIcon.setVisibility(View.INVISIBLE);
-//            }
-//            else {
-
-//            }
         }
     }
     private File createImageFile() throws IOException {
@@ -291,5 +256,36 @@ public class MainActivity extends AppCompatActivity implements OnClickListener{
         String imageFileName = "VIDEO_" + timeStamp + "_";
         File storageDir = getExternalFilesDir(Environment.DIRECTORY_MOVIES);
         return File.createTempFile(imageFileName, ".mp4", storageDir);
+    }
+
+    @Override
+    public void onUriSelected(Uri uri) {
+        getSupportFragmentManager().popBackStack();
+        HomeScreenStoriesFragment fragment = (HomeScreenStoriesFragment) getSupportFragmentManager().findFragmentByTag("storiesFragment");
+        if (fragment != null) {
+            fragment.addToUriList(uri);
+        }
+    }
+
+    @Override
+    public void onReplaceFragmentRequest(Uri uri, Boolean isVideo) {
+        PickedMediaPreviewFragment fragment = PickedMediaPreviewFragment.newInstance(this);
+        Bundle bundle = new Bundle();
+        if(isVideo){
+            bundle.putParcelable("videoUri", uri);
+        }
+        else  {
+            bundle.putParcelable("imageUri" , uri);
+        }
+        fragment.setArguments(bundle);
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.fragment_container, fragment, "previewFragment")
+                .addToBackStack("previewFragment")
+                .commit();
+    }
+
+    @Override
+    public void onCancelClicked() {
+        getSupportFragmentManager().popBackStack();
     }
 }
