@@ -9,6 +9,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.graphics.Camera;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -37,9 +38,11 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.shubham.swipenest.R;
+import com.shubham.swipenest.story.CameraActivity;
 import com.shubham.swipenest.story.MainActivity;
 import com.shubham.swipenest.story.StoryPlayerActivity;
 import com.shubham.swipenest.story.StoryViewAdapter;
+import com.shubham.swipenest.utils.Camera_capture;
 import com.shubham.swipenest.utils.OnClickListener;
 import com.shubham.swipenest.utils.StreamUtils;
 
@@ -92,42 +95,29 @@ public class HomeScreenStoriesFragment extends Fragment implements OnClickListen
             dialog.show();
 
             customView.findViewById(R.id.llCaptureImage).setOnClickListener( v -> {
-                intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-                //intent.addFlags(Intent.FLAG_FULLSCREEN);
-                Uri uri = null;
-                try {
-                    imageFile = createImageFile();
-                    uri = FileProvider.getUriForFile(requireContext(), "com.shubham.swipenest.fileprovider", imageFile);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                intent.putExtra(MediaStore.EXTRA_OUTPUT, uri);
-                if(ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA)!= PackageManager.PERMISSION_GRANTED){
-                    permissionLauncher.launch(new String[]{Manifest.permission.CAMERA});
-                }
-                else receiveData.launch(intent);
-                dialog.dismiss();
-            });
-
-            customView.findViewById(R.id.llRecordVideo).setOnClickListener( v -> {
-                intent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
-                if(intent.resolveActivity(requireContext().getPackageManager()) != null){
-                    Uri uri = null;
-                    try {
-                        videoFile = createVideoFile();
-                        uri = FileProvider.getUriForFile(requireContext(), "com.shubham.swipenest.fileprovider", videoFile);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    intent.putExtra(MediaStore.EXTRA_DURATION_LIMIT, 30);
-                    intent.putExtra(MediaStore.EXTRA_OUTPUT, uri);
-                    if(ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA)!=PackageManager.PERMISSION_GRANTED){
-                        permissionLauncher.launch(new String[]{Manifest.permission.CAMERA});
-                    }
-                    else {
-                        receiveData.launch(intent);
-                    }
-                }else Toast.makeText(requireContext(), "No camera app found", Toast.LENGTH_SHORT).show();
+//                intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+//                //intent.addFlags(Intent.FLAG_FULLSCREEN);
+//                Uri uri = null;
+//                try {
+//                    imageFile = createImageFile();
+//                    uri = FileProvider.getUriForFile(requireContext(), "com.shubham.swipenest.fileprovider", imageFile);
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
+//                intent.putExtra(MediaStore.EXTRA_OUTPUT, uri);
+//                if(ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA)!= PackageManager.PERMISSION_GRANTED){
+//                    permissionLauncher.launch(new String[]{Manifest.permission.CAMERA});
+//                }
+//                else receiveData.launch(intent);
+//                dialog.dismiss();
+//                intent = new Intent(getActivity(), Camera_capture.class);
+//                if(ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA)!= PackageManager.PERMISSION_GRANTED){
+//                    permissionLauncher.launch(new String[]{Manifest.permission.CAMERA});
+//                }
+//                else receiveData.launch(intent);
+//                dialog.dismiss();
+                intent = new Intent(requireContext(), CameraActivity.class);
+                receiveData.launch(intent);
                 dialog.dismiss();
             });
 
@@ -158,23 +148,39 @@ public class HomeScreenStoriesFragment extends Fragment implements OnClickListen
             new ActivityResultCallback<ActivityResult>() {
                 @Override
                 public void onActivityResult(ActivityResult result) {
-                    selectedMediaUris.clear();
-                    if(result.getResultCode() == Activity.RESULT_OK && imageFile!=null){
-                        Uri uri = FileProvider.getUriForFile(requireContext(), "com.shubham.swipenest.fileprovider", imageFile);
-                        selectedMediaUris.add(uri);
-                    }
-                    else if(result.getResultCode() == Activity.RESULT_OK && videoFile!=null){
-                        Uri uri = FileProvider.getUriForFile(requireContext(), "com.shubham.swipenest.fileprovider", videoFile);
-                        selectedMediaUris.add(uri);
-                    }
-                    else if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null) {
-                        Intent intent = result.getData();
-                        ClipData clipData = intent.getClipData();
-                        if (clipData != null && clipData.getItemCount()>1) {
-                            // Multiple items selected
-                            int count = clipData.getItemCount();
-                            for (int i = 0; i < count; i++) {
-                                Uri mediaUri = clipData.getItemAt(i).getUri();
+//                    selectedMediaUris.clear();
+
+                    if (result.getResultCode() == Activity.RESULT_OK && result.getData() != null){
+                        String cameraTag = result.getData().getStringExtra("CameraActivity");
+                        if(cameraTag == null){
+                            Intent intent = result.getData();
+                            ClipData clipData = intent.getClipData();
+                            if (clipData != null && clipData.getItemCount()>1) {
+                                // Multiple items selected
+                                int count = clipData.getItemCount();
+                                for (int i = 0; i < count; i++) {
+                                    Uri mediaUri = clipData.getItemAt(i).getUri();
+                                    try {
+                                        ParcelFileDescriptor parcelFileDescriptor = requireContext().getContentResolver().openFileDescriptor(mediaUri, "r", null);
+                                        if(parcelFileDescriptor!=null){
+                                            FileInputStream inputStream = new FileInputStream(parcelFileDescriptor.getFileDescriptor());
+                                            String fileName = getFileNameFromUri(requireContext(), mediaUri);
+                                            File file = new File(requireContext().getCacheDir(), fileName);
+                                            FileOutputStream outputStream = new FileOutputStream(file);
+                                            StreamUtils.copyStream(inputStream, outputStream);
+                                            parcelFileDescriptor.close();
+                                            Uri uri = FileProvider.getUriForFile(requireContext(), "com.shubham.swipenest.fileprovider", file);
+                                            selectedMediaUris.add(uri);
+                                        }
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }
+                            else if (intent.getData() != null) {
+                                // Single item selected
+                                Uri mediaUri = intent.getData();
+
                                 try {
                                     ParcelFileDescriptor parcelFileDescriptor = requireContext().getContentResolver().openFileDescriptor(mediaUri, "r", null);
                                     if(parcelFileDescriptor!=null){
@@ -185,37 +191,21 @@ public class HomeScreenStoriesFragment extends Fragment implements OnClickListen
                                         StreamUtils.copyStream(inputStream, outputStream);
                                         parcelFileDescriptor.close();
                                         Uri uri = FileProvider.getUriForFile(requireContext(), "com.shubham.swipenest.fileprovider", file);
-                                        selectedMediaUris.add(uri);
+                                        //selectedMediaUris.add(uri);
+                                        String mimeType = requireContext().getContentResolver().getType(uri);
+                                        boolean isVideo = mimeType != null && mimeType.startsWith("video/");
+                                        listener.onReplaceFragmentRequest(uri, isVideo);
                                     }
                                 } catch (IOException e) {
                                     e.printStackTrace();
                                 }
                             }
                         }
-                        else if (intent.getData() != null) {
-                            // Single item selected
-                            Uri mediaUri = intent.getData();
-
-                            try {
-                                ParcelFileDescriptor parcelFileDescriptor = requireContext().getContentResolver().openFileDescriptor(mediaUri, "r", null);
-                                if(parcelFileDescriptor!=null){
-                                    FileInputStream inputStream = new FileInputStream(parcelFileDescriptor.getFileDescriptor());
-                                    String fileName = getFileNameFromUri(requireContext(), mediaUri);
-                                    File file = new File(requireContext().getCacheDir(), fileName);
-                                    FileOutputStream outputStream = new FileOutputStream(file);
-                                    StreamUtils.copyStream(inputStream, outputStream);
-                                    parcelFileDescriptor.close();
-                                    Uri uri = FileProvider.getUriForFile(requireContext(), "com.shubham.swipenest.fileprovider", file);
-                                    //selectedMediaUris.add(uri);
-                                    String mimeType = requireContext().getContentResolver().getType(uri);
-                                    boolean isVideo = mimeType != null && mimeType.startsWith("video/");
-                                    Log.d("isVIdeo " , "is video " + isVideo);
-                                    Log.d("isVIdeo " , "memeType  " + mimeType);
-                                    listener.onReplaceFragmentRequest(uri, isVideo);
-                                }
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
+                        else {
+                            Uri uri = result.getData().getData();
+                            String mimeType = requireContext().getContentResolver().getType(uri);
+                            boolean isVideo = mimeType != null && mimeType.startsWith("video/");
+                            listener.onReplaceFragmentRequest(uri, isVideo);
                         }
                     }
                 }
@@ -235,6 +225,7 @@ public class HomeScreenStoriesFragment extends Fragment implements OnClickListen
     public void addToUriList(Uri uri){
         selectedMediaUris.add(uri);
     }
+
     private File createImageFile() throws IOException {
         // Create an image file name
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());

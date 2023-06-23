@@ -204,29 +204,6 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
                     dialog.dismiss();
                 });
 
-                customView.findViewById(R.id.llRecordVideo).setOnClickListener( v -> {
-                    intent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
-                    if(intent.resolveActivity(getPackageManager()) != null){
-                        Uri uri = null;
-                        try {
-                            videoFile = createVideoFile();
-                            uri = FileProvider.getUriForFile(MainActivity.this, "com.shubham.swipenest.fileprovider", videoFile);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                        intent.putExtra(MediaStore.EXTRA_DURATION_LIMIT, 30);
-                        intent.putExtra(MediaStore.EXTRA_OUTPUT, uri);
-                        if(ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)!=PackageManager.PERMISSION_GRANTED){
-                            permissionLauncher.launch(new String[]{Manifest.permission.CAMERA});
-                        }
-                        else {
-                            receiveData.launch(intent);
-                        }
-                    }else Toast.makeText(this, "No camera app found", Toast.LENGTH_SHORT).show();
-                    viewHolder.plusIcon.setVisibility(View.INVISIBLE);
-                    dialog.dismiss();
-                });
-
                 customView.findViewById(R.id.llSelectMedia).setOnClickListener( v -> {
                     intent = new Intent(Intent.ACTION_PICK);
                     intent.setType("image/* video/*");

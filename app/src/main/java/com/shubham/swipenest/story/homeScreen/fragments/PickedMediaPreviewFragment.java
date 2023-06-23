@@ -84,13 +84,14 @@ public class PickedMediaPreviewFragment extends Fragment {
                         .into(pickedImage);
             }
             else if(videoUri!=null){
+                Log.d("FragmentPreview", "inside videoUri " + videoUri);
+
                 pickedImage.setVisibility(View.GONE);
                 videoView.setVisibility(View.VISIBLE);
                 videoView.setVideoURI(videoUri);
-                videoView.start();
-
-                videoView.setOnPreparedListener( mp -> {
+                videoView.setOnPreparedListener(mp -> {
                     mediaPlayer = mp;
+                   // videoView.seekTo(currentPosition);
                     // play only the first 30 seconds
                     int duration = mediaPlayer.getDuration();
                     int playbackPosition = 30000;
@@ -105,8 +106,11 @@ public class PickedMediaPreviewFragment extends Fragment {
                         if(videoView.isPlaying()){
                             videoView.stopPlayback();
                         }
+                        Log.d("uris" , "skipping the story");
+                        //videoView.skip();
                     };
                     handler.postDelayed(runnable, playbackPosition);
+                    //videoView = true;
                 });
             }
         }

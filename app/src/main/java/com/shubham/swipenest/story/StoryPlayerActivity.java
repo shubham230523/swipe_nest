@@ -294,6 +294,8 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
         for(int i = 0; i<MediaUriList.size(); i++){
             Uri uri = MediaUriList.get(i);
             String[] uriList = uri.toString().split("\\.");
+            String mimeType = this.getContentResolver().getType(uri);
+            boolean isVideo = mimeType != null && mimeType.startsWith("video/");
             if(
                     uriList[uriList.length-1].equals("mp4")
                             || uriList[uriList.length-1].equals("avi")
@@ -301,7 +303,7 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
                             || uriList[uriList.length-1].equals("mov")
                             || uriList[uriList.length-1].equals("wmv")
                             || uriList[uriList.length-1].equals("flv")
-                            || uriList[uriList.length-1].equals("webm")
+                            || uriList[uriList.length-1].equals("webm") || isVideo
             ){
                 isImageList.add(false);
                 try {
@@ -415,6 +417,7 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
     private void setUpStory(Uri uri, Boolean isImage, String username, String time, String like, String storyText)
     {
         if(!isImage) {
+            Log.d("uris" , " uri check inside video " + uri);
             image.setVisibility(View.GONE);
             storyVideoView.setVisibility(View.VISIBLE);
             storyVideoView.setVideoURI(uri);
@@ -445,7 +448,7 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
         else {
             storyVideoView.setVisibility(View.GONE);
             image.setVisibility(View.VISIBLE);
-            Log.d("uris" , "image uri before using glide " + uri);
+            Log.d("uris" , "uri check inside image " + uri);
             Glide.with(this)
                     .load(uri)
                     .listener(new RequestListener<Drawable>() {
