@@ -19,7 +19,7 @@
         android:layout_marginBottom="50dp"
         android:layout_marginEnd="50dp"
         android:elevation="2dp"
-        android:visibility="visible"
+        android:visibility="invisible"
         android:text="Take photo"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
@@ -32,7 +32,7 @@
         android:layout_marginBottom="50dp"
         android:layout_marginStart="50dp"
         android:elevation="2dp"
-        android:visibility="visible"
+        android:visibility="invisible"
         android:text="Capture video"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toEndOf="@id/vertical_centerline" />
@@ -43,7 +43,7 @@
         android:id="@+id/btnRotateCamera"
         android:src="@drawable/ic_switch_camera"
         app:layout_constraintEnd_toEndOf="parent"
-        android:visibility="visible"
+        android:visibility="invisible"
         app:layout_constraintBottom_toTopOf="@id/video_capture_button"
         android:layout_marginEnd="20dp"
         android:layout_marginBottom="20dp"/>

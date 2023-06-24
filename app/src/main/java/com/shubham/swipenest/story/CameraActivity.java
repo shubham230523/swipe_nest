@@ -98,7 +98,7 @@ public class CameraActivity extends AppCompatActivity{
 
         // Request camera permissions
         if(allPermissionsGranted()){
-            startCamera(CameraSelector.DEFAULT_BACK_CAMERA);
+            startCamera(CameraSelector.DEFAULT_FRONT_CAMERA);
         }
         else {
             requestPermissions();
@@ -145,12 +145,11 @@ public class CameraActivity extends AppCompatActivity{
 
                 // Bind use cases to camera
                  Camera camera  = cameraProvider.bindToLifecycle(this, currentCameraSelector, preview, imageCapture, videoCapture);
-                // camera.getCameraControl().setZoomRatio(2.0f);
+                camera.getCameraControl().setZoomRatio(1.5f);
 
             } catch (ExecutionException | InterruptedException e) {
                 Log.e(TAG, "Use case binding failed", e);
             }
-
         }, ContextCompat.getMainExecutor(this));
     }
 
