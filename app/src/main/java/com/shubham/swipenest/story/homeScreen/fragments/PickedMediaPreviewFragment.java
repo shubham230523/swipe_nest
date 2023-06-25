@@ -3,19 +3,27 @@ package com.shubham.swipenest.story.homeScreen.fragments;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.content.ContentValues;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.media.Image;
 import android.media.MediaPlayer;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.DragEvent;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
+import android.view.MotionEvent;
+import android.view.ScaleGestureDetector;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
@@ -30,6 +38,7 @@ import android.widget.VideoView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
@@ -39,9 +48,18 @@ import com.bumptech.glide.load.DataSource;
 import com.bumptech.glide.load.engine.GlideException;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.Target;
+import com.github.chrisbanes.photoview.PhotoView;
 import com.shubham.swipenest.R;
 import com.shubham.swipenest.story.MainActivity;
 import com.shubham.swipenest.story.StoryPlayerActivity;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 
 public class PickedMediaPreviewFragment extends Fragment implements View.OnTouchListener{
 
@@ -54,8 +72,8 @@ public class PickedMediaPreviewFragment extends Fragment implements View.OnTouch
     }
 
     Uri imageUri, videoUri;
-    ImageView pickedImage;
     ImageView btnDeSelect, btnAddText;
+    PhotoView pickedImage;
     ImageView btnAddToStory;
     VideoView videoView;
     MediaPlayer mediaPlayer;
@@ -195,7 +213,60 @@ public class PickedMediaPreviewFragment extends Fragment implements View.OnTouch
 
         btnAddToStory.setOnClickListener(v -> {
             if(imageUri!=null){
-                listener.onUriSelected(imageUri);
+
+                // we are getting the zoomed image scaleX present inside imageview and then we are creating
+                // a new bitmap from the scale and from original height and width which represents the zoomed bitmap
+                // this bitmap is stored as a file in external directories of picture and then we are getting its
+                // uri which is passed to onUriSelected method
+                // the file represented by "imageUri" is a file in cache directory so we are not using the here
+
+                // creating the bitmap
+                pickedImage.setDrawingCacheEnabled(true);
+                Bitmap zoomedBitmap = Bitmap.createBitmap(pickedImage.getDrawingCache());
+                pickedImage.setDrawingCacheEnabled(false);
+                int originalImageWidth = pickedImage.getWidth();
+                int originalImageHeight = pickedImage.getHeight();
+
+                float zoomScale = pickedImage.getScaleX(); // Assuming the x-axis and y-axis scales are equal
+                int zoomedWidth = (int) (pickedImage.getWidth() * zoomScale);
+                int zoomedHeight = (int) (pickedImage.getHeight() * zoomScale);
+
+                Bitmap newBitmap = Bitmap.createBitmap(originalImageWidth, originalImageHeight, Bitmap.Config.ARGB_8888);
+                Canvas canvas = new Canvas(newBitmap);
+
+                int left = (originalImageWidth - zoomedWidth) / 2;
+                int top = (originalImageHeight - zoomedHeight) / 2;
+
+                canvas.drawBitmap(zoomedBitmap, left, top, null);
+
+                // creating the file
+                String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+                String imageFileName = "IMG_" + timeStamp + "_";
+
+                File storageDir = requireContext().getExternalFilesDir(Environment.DIRECTORY_PICTURES);
+
+                FileOutputStream outputStream = null;
+
+                try {
+                    File zoomedFiled = File.createTempFile(imageFileName, ".jpg", storageDir);
+                    outputStream = new FileOutputStream(zoomedFiled);
+                    // writing zoomed image bitmap to file
+                    newBitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream);
+                    outputStream.flush();
+                    Uri uri = FileProvider.getUriForFile(requireContext(), "com.shubham.swipenest.fileprovider", zoomedFiled);
+                    // sending the uri back
+                    listener.onUriSelected(uri);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                } finally {
+                    try {
+                        if (outputStream != null) {
+                            outputStream.close();
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
             }
             else listener.onUriSelected(videoUri);
         });
@@ -272,6 +343,7 @@ public class PickedMediaPreviewFragment extends Fragment implements View.OnTouch
                 tvDoneTyping.setVisibility(View.GONE);
             }
         });
+
         return view;
     }
 

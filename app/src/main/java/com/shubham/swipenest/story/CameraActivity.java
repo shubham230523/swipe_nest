@@ -1,12 +1,14 @@
 package com.shubham.swipenest.story;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Matrix;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.PersistableBundle;
@@ -14,8 +16,10 @@ import android.provider.MediaStore;
 import android.util.Log;
 import android.util.Rational;
 import android.util.Size;
+import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.TextureView;
+import android.view.View;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
@@ -55,6 +59,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import com.google.android.material.progressindicator.CircularProgressIndicator;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.shubham.swipenest.R;
 import com.shubham.swipenest.databinding.ActivityCameraBinding;
@@ -70,7 +75,9 @@ public class CameraActivity extends AppCompatActivity{
     private CameraSelector currentCameraSelector;
     ProcessCameraProvider cameraProvider;
     Preview preview;
-    private CameraControl cameraControl;
+    private Boolean isVideoRecordingStarted = false;
+    private CircularProgressIndicator circularProgressIndicator;
+    private CountDownTimer countDownTimer;
 
 
     private static final String TAG = "CameraXApp";
@@ -89,28 +96,60 @@ public class CameraActivity extends AppCompatActivity{
         REQUIRED_PERMISSIONS = permissionsList.toArray(new String[0]);
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         viewBinding = ActivityCameraBinding.inflate(getLayoutInflater());
         setContentView(viewBinding.getRoot());
 
+        circularProgressIndicator = viewBinding.videoProgress;
 
         // Request camera permissions
         if(allPermissionsGranted()){
-            startCamera(CameraSelector.DEFAULT_FRONT_CAMERA);
+            startCamera(CameraSelector.DEFAULT_BACK_CAMERA);
         }
         else {
             requestPermissions();
         }
 
-        //setting listener for image capture and video recording button
-        findViewById(R.id.image_capture_button).setOnClickListener( v -> {
+
+        //setting listener for image capture and video recording
+        viewBinding.captureMedia.setOnClickListener( v -> {
             takePhoto();
         });
 
-        findViewById(R.id.video_capture_button).setOnClickListener(v -> {
-            captureVideo();
+        // if the user is holding the capture button then video recording is started
+        viewBinding.captureMedia.setOnLongClickListener(new View.OnLongClickListener() {
+            @Override
+            public boolean onLongClick(View view) {
+                isVideoRecordingStarted = true;
+                viewBinding.captureMedia.setImageResource(R.drawable.ic_camera_capture);
+                circularProgressIndicator.setTrackColor(ContextCompat.getColor(CameraActivity.this, R.color.darkYello));
+                captureVideo();
+                startCountdownTimer();
+                return true;
+            }
+        });
+
+        // on touch listener is added to detect user capture button release action
+        // here if the isVideoRecordingStarted boolean is set then it means video was started and we have
+        // to stop it and save it
+        viewBinding.captureMedia.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View view, MotionEvent motionEvent) {
+                if(motionEvent.getAction() == MotionEvent.ACTION_UP && isVideoRecordingStarted){
+                    captureVideo();
+                    circularProgressIndicator.setTrackColor(ContextCompat.getColor(CameraActivity.this, R.color.transparentBlack));
+                    viewBinding.captureMedia.setBackgroundResource(R.drawable.ic_default_camera_capture);
+                    circularProgressIndicator.setProgress(0);
+                    if(countDownTimer!=null){
+                        countDownTimer.cancel();
+                    }
+                    isVideoRecordingStarted = false;
+                }
+                return false;
+            }
         });
 
         viewBinding.btnRotateCamera.setOnClickListener( v-> {
@@ -118,6 +157,30 @@ public class CameraActivity extends AppCompatActivity{
         });
 
         cameraExecutor = Executors.newSingleThreadExecutor();
+    }
+
+    private void startCountdownTimer() {
+        countDownTimer = new CountDownTimer(30000, 1000) {
+            @Override
+            public void onTick(long millisUntilFinished) {
+                // Calculate the progress value based on the remaining time
+                int progress = (int) (((30000 - millisUntilFinished) / 30000.0) * 100);
+
+                // Update the progress indicator
+                circularProgressIndicator.setProgressCompat(progress, true);
+            }
+
+            @Override
+            public void onFinish() {
+                captureVideo();
+                circularProgressIndicator.setProgress(0);
+                viewBinding.captureMedia.setBackgroundResource(R.drawable.ic_default_camera_capture);
+                circularProgressIndicator.setTrackColor(ContextCompat.getColor(CameraActivity.this, R.color.transparentBlack));
+                // Countdown timer finished, handle any desired actions
+            }
+        };
+
+        countDownTimer.start();
     }
 
     private void startCamera(CameraSelector cameraSelector) {
@@ -132,9 +195,10 @@ public class CameraActivity extends AppCompatActivity{
                 preview = new Preview.Builder().build();
                 preview.setSurfaceProvider(viewBinding.viewFinder.getSurfaceProvider());
 
-                imageCapture = new ImageCapture.Builder().build();
+                imageCapture = new ImageCapture.Builder()
+                        .setTargetResolution(new Size(1080, 1920)).build();
                 Recorder recorder = new Recorder.Builder()
-                        .setQualitySelector(QualitySelector.from(Quality.HIGHEST)).build();
+                        .setQualitySelector(QualitySelector.from(Quality.FHD)).build();
                 videoCapture = VideoCapture.withOutput(recorder);
 
                 // Select back camera as a default
@@ -144,12 +208,12 @@ public class CameraActivity extends AppCompatActivity{
                 cameraProvider.unbindAll();
 
                 // Bind use cases to camera
-                 Camera camera  = cameraProvider.bindToLifecycle(this, currentCameraSelector, preview, imageCapture, videoCapture);
-                camera.getCameraControl().setZoomRatio(1.5f);
+                 cameraProvider.bindToLifecycle(this, currentCameraSelector, preview, imageCapture, videoCapture);
 
             } catch (ExecutionException | InterruptedException e) {
                 Log.e(TAG, "Use case binding failed", e);
             }
+
         }, ContextCompat.getMainExecutor(this));
     }
 
@@ -210,8 +274,6 @@ public class CameraActivity extends AppCompatActivity{
             return;
         }
 
-        viewBinding.videoCaptureButton.setEnabled(false);
-
         Recording curRecording = recording;
         if (curRecording != null) {
             // Stop the current recording session.
@@ -244,8 +306,8 @@ public class CameraActivity extends AppCompatActivity{
                     .withAudioEnabled()
             .start(ContextCompat.getMainExecutor(CameraActivity.this), recordEvent -> {
                 if (recordEvent instanceof VideoRecordEvent.Start) {
-                    viewBinding.videoCaptureButton.setText(getString(R.string.stop_capture));
-                    viewBinding.videoCaptureButton.setEnabled(true);
+//                    viewBinding.videoCaptureButton.setText(getString(R.string.stop_capture));
+//                    viewBinding.videoCaptureButton.setEnabled(true);
                 } else if (recordEvent instanceof VideoRecordEvent.Finalize) {
                     VideoRecordEvent.Finalize finalizeEvent = (VideoRecordEvent.Finalize) recordEvent;
                     if (!finalizeEvent.hasError()) {
@@ -267,8 +329,8 @@ public class CameraActivity extends AppCompatActivity{
                         Log.e(TAG, "Video capture ends with error: " +
                                 finalizeEvent.getError());
                     }
-                    viewBinding.videoCaptureButton.setText(getString(R.string.start_capture));
-                    viewBinding.videoCaptureButton.setEnabled(true);
+//                    viewBinding.videoCaptureButton.setText(getString(R.string.start_capture));
+//                    viewBinding.videoCaptureButton.setEnabled(true);
                 }
             });
         }
@@ -277,8 +339,8 @@ public class CameraActivity extends AppCompatActivity{
                     .prepareRecording(CameraActivity.this, mediaStoreOutputOptions)
             .start(ContextCompat.getMainExecutor(CameraActivity.this), recordEvent -> {
                 if (recordEvent instanceof VideoRecordEvent.Start) {
-                    viewBinding.videoCaptureButton.setText(getString(R.string.stop_capture));
-                    viewBinding.videoCaptureButton.setEnabled(true);
+//                    viewBinding.videoCaptureButton.setText(getString(R.string.stop_capture));
+//                    viewBinding.videoCaptureButton.setEnabled(true);
                 } else if (recordEvent instanceof VideoRecordEvent.Finalize) {
                     VideoRecordEvent.Finalize finalizeEvent = (VideoRecordEvent.Finalize) recordEvent;
                     if (!finalizeEvent.hasError()) {
@@ -298,8 +360,8 @@ public class CameraActivity extends AppCompatActivity{
                         Log.e(TAG, "Video capture ends with error: " +
                                 finalizeEvent.getError());
                     }
-                    viewBinding.videoCaptureButton.setText(getString(R.string.start_capture));
-                    viewBinding.videoCaptureButton.setEnabled(true);
+//                    viewBinding.videoCaptureButton.setText(getString(R.string.start_capture));
+//                    viewBinding.videoCaptureButton.setEnabled(true);
                 }
             });
         }
