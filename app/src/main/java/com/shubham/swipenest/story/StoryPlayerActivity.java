@@ -9,6 +9,7 @@ import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
@@ -39,6 +40,7 @@ import com.shubham.swipenest.model.Viewers;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import de.hdodenhof.circleimageview.CircleImageView;
@@ -351,7 +353,9 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
         storyTimeTV = findViewById(R.id.storyTimeTV);
 
         // on below line we are setting image to our image view.
-        setUpStory(MediaUriList.get(counter), isImageList.get(counter) , usernames[0],storyTimes[0],likeCounts[0],storyText[0]);
+        Uri uri = MediaUriList.get(counter);
+        Boolean isUriCombined = uri.toString().contains("$");
+        setUpStory(MediaUriList.get(counter), isImageList.get(counter) , isUriCombined, usernames[0],storyTimes[0],likeCounts[0],storyText[0]);
 
     }
 
@@ -364,7 +368,10 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
             handler.removeCallbacks(runnable);
             isCallBackPosted = false;
         }
-        setUpStory(MediaUriList.get(++counter), isImageList.get(counter),usernames[0],storyTimes[0],likeCounts[0],storyText[0]);
+//        counter++;
+        Uri uri = MediaUriList.get(counter);
+        Boolean isUriCombined = uri.toString().contains("$");
+        setUpStory(MediaUriList.get(counter), isImageList.get(counter), isUriCombined, usernames[0],storyTimes[0],likeCounts[0],storyText[0]);
     }
 
     @Override
@@ -377,7 +384,10 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
         // this method id called when we move to previous story.
         // on below line we are decreasing our counter
         if ((counter - 1) < 0) return;
-        setUpStory(MediaUriList.get(--counter), isImageList.get(counter), usernames[0],storyTimes[0],likeCounts[0],storyText[0]);
+        counter--;
+        Uri uri = MediaUriList.get(counter);
+        Boolean isUriCombined = uri.toString().contains("$");
+        setUpStory(MediaUriList.get(counter), isImageList.get(counter), isUriCombined,  usernames[0],storyTimes[0],likeCounts[0],storyText[0]);
 
         // on below line we are setting image to image view
     }
@@ -414,9 +424,63 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
         return gestureDetector.onTouchEvent(event);
     }
 
-    private void setUpStory(Uri uri, Boolean isImage, String username, String time, String like, String storyText)
+    private void setUpStory(Uri uri, Boolean isImage, Boolean combinedUri, String username, String time, String like, String storyText)
     {
-        if(!isImage) {
+        Log.d("combinedUri", "only video uri " + uri);
+        Log.d("combinedUri" , "combined uri " + combinedUri + "uri " + uri);
+        String[] uriList = uri.toString().split("\\$");
+        Log.d("combinedUri", Arrays.toString(uriList));
+
+        if(combinedUri){
+
+            Uri videoUri = Uri.parse(uriList[0]);
+            Uri imageUri = Uri.parse(uriList[1]);
+            Log.d("combinedUri" , "combined video uri " + videoUri);
+            image.setVisibility(View.VISIBLE);
+//            storyVideoView.setVisibility(View.GONE);
+            storyVideoView.setVisibility(View.VISIBLE);
+            storyVideoView.setVideoURI(videoUri);
+            storyVideoView.setOnPreparedListener(mp -> {
+                mediaPlayer = mp;
+                storyVideoView.seekTo(currentPosition);
+                // play only the first 30 seconds
+                int duration = mediaPlayer.getDuration();
+                int playbackPosition = 30000;
+                if(duration > playbackPosition){
+                    mediaPlayer.seekTo(playbackPosition);
+                }
+
+                storyVideoView.start();
+
+                // stopping after 30 seconds
+                runnable = () -> {
+                    if(storyVideoView.isPlaying()){
+                        storyVideoView.stopPlayback();
+                    }
+                    Log.d("uris" , "skipping the story");
+                    storiesProgressView.skip();
+                };
+                handler.postDelayed(runnable, playbackPosition);
+                isCallBackPosted = true;
+            });
+
+            Glide.with(this)
+                    .load(imageUri)
+                    .listener(new RequestListener<Drawable>() {
+                        @Override
+                        public boolean onLoadFailed(@Nullable GlideException e, Object model, Target<Drawable> target, boolean isFirstResource) {
+                            Toast.makeText(StoryPlayerActivity.this, "Failed to load image.", Toast.LENGTH_SHORT).show();
+                            return false;
+                        }
+
+                        @Override
+                        public boolean onResourceReady(Drawable resource, Object model, Target<Drawable> target, DataSource dataSource, boolean isFirstResource) {
+                            return false;
+                        }
+                    })
+                    .into(image);
+        }
+        else if(!isImage) {
             Log.d("uris" , " uri check inside video " + uri);
             image.setVisibility(View.GONE);
             storyVideoView.setVisibility(View.VISIBLE);

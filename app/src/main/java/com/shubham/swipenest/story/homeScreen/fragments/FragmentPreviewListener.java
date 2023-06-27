@@ -7,3 +7,4 @@ public interface FragmentPreviewListener {
     void onReplaceFragmentRequest(Uri uri, Boolean isVideo);
     void onCancelClicked();
 }
+

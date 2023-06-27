@@ -228,7 +228,7 @@ public class MainActivity extends AppCompatActivity implements OnClickListener, 
         return File.createTempFile(imageFileName, ".jpg", storageDir);
     }
 
-    private File createVideoFile() throws IOException {
+    public File createVideoFile() throws IOException {
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
         String imageFileName = "VIDEO_" + timeStamp + "_";
         File storageDir = getExternalFilesDir(Environment.DIRECTORY_MOVIES);

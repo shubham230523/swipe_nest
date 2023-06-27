@@ -21,6 +21,17 @@
     <ImageView
         android:layout_width="30dp"
         android:layout_height="30dp"
+        android:id="@+id/btnPickColor"
+        android:visibility="invisible"
+        android:src="@drawable/ic_pick_color"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/btnAddText"
+        android:layout_marginTop="15dp"
+        android:layout_marginEnd="15dp"/>
+
+    <ImageView
+        android:layout_width="30dp"
+        android:layout_height="30dp"
         android:id="@+id/btnAddText"
         android:visibility="invisible"
         android:src="@drawable/ic_text"
@@ -43,10 +54,10 @@
         app:layout_constraintTop_toTopOf="parent"
         android:layout_marginTop="15dp"/>
 
-
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
+        android:visibility="visible"
         app:layout_constraintTop_toBottomOf="@id/btnDeselect"
         app:layout_constraintBottom_toTopOf="@id/btnAddToStory"
         android:id="@+id/rl_preview_img">
@@ -59,19 +70,57 @@
             android:layout_marginBottom="10dp"
             android:id="@+id/ivImgPreview"/>
 
+        <VideoView
+            android:id="@+id/VideoPreview"
+            android:visibility="visible"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="10dp" />
+
     </RelativeLayout>
 
-    <VideoView
-        android:id="@+id/VideoPreview"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_marginTop="10dp"
-        android:layout_marginBottom="10dp"
-        app:layout_constraintTop_toBottomOf="@id/btnDeselect"
-        app:layout_constraintBottom_toTopOf="@id/btnAddToStory"
-        app:layout_constraintEnd_toEndOf="parent"
+    <SeekBar
+        android:layout_width="0dp"
+        android:layout_height="15dp"
+        android:orientation="horizontal"
+        android:id="@+id/fontSeekbar"
+        android:focusable="true"
+        android:max="100"
+        android:elevation="20dp"
+        android:translationZ="20dp"
+        android:layout_marginTop="60dp"
+        android:layout_marginStart="30dp"
+        android:layout_marginEnd="30dp"
+        android:focusedByDefault="true"
+        android:visibility="gone"
         app:layout_constraintStart_toStartOf="parent"
-        tools:layout_editor_absoluteY="1dp" />
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/btnDeselect" />
+
+    <ImageView
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:id="@+id/btnDeleteText"
+        android:visibility="gone"
+        android:layout_marginBottom="10dp"
+        android:focusable="true"
+        android:clickable="true"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/rvTypography"
+        android:src="@drawable/ic_delete"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/rvTypography"
+        android:elevation="40dp"
+        android:layout_marginStart="15dp"
+        android:layout_marginEnd="15dp"
+        android:visibility="invisible"
+        android:translationZ="40dp"
+        app:layout_constraintBottom_toTopOf="@id/btnAddToStory"/>
 
     <TextView
         android:layout_width="0dp"
