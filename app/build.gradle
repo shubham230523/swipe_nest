@@ -52,9 +52,6 @@ dependencies {
     //CircularImageView
     implementation 'de.hdodenhof:circleimageview:3.1.0'
 
-    // images and video picker
-    implementation 'com.github.jkwiecien:EasyImage:3.2.0'
-
     // material dependency
     implementation 'com.google.android.material:material:1.9.0'
 
@@ -70,13 +67,8 @@ dependencies {
     // zoomable photo view
     implementation 'com.github.chrisbanes:PhotoView:2.0.0'
 
-    // color picker
-    implementation "com.github.duanhong169:colorpicker:1.1.6"
-    implementation 'com.github.duanhong169:checkerboarddrawable:1.0.2'
-
-    // ffmeg
-    implementation "com.arthenica:mobile-ffmpeg-full:4.4"
-    implementation "org.florescu.android.rangeseekbar:rangeseekbar-library:0.3.0"
+    // color picker seekbar
+    implementation 'com.github.rtugeek:colorseekbar:2.0.3'
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'

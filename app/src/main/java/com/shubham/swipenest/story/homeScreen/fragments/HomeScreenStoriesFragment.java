@@ -7,22 +7,17 @@ import android.content.ClipData;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.database.Cursor;
-import android.graphics.Camera;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.ParcelFileDescriptor;
-import android.provider.DocumentsContract;
-import android.provider.MediaStore;
 import android.provider.OpenableColumns;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.webkit.MimeTypeMap;
-import android.widget.ImageView;
+import android.view.ViewTreeObserver;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResult;
@@ -31,7 +26,6 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -39,10 +33,8 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.shubham.swipenest.R;
 import com.shubham.swipenest.story.CameraActivity;
-import com.shubham.swipenest.story.MainActivity;
 import com.shubham.swipenest.story.StoryPlayerActivity;
 import com.shubham.swipenest.story.StoryViewAdapter;
-import com.shubham.swipenest.utils.Camera_capture;
 import com.shubham.swipenest.utils.OnClickListener;
 import com.shubham.swipenest.utils.StreamUtils;
 
@@ -59,15 +51,11 @@ import java.util.Locale;
 public class HomeScreenStoriesFragment extends Fragment implements OnClickListener {
 
     RecyclerView storyViewRV;
-    ImageView addStoryIcon;
     String[] usernameList = {"Shubham","Omkar","Vikas","Akash","Tushar"};
-    String[] mimeTypes = {"image/*", "video/*"};
     List<Uri> selectedMediaUris = new ArrayList<>();
     Intent intent;
-    String[] permissions;
-    File imageFile;
-    File videoFile;
     FragmentPreviewListener listener;
+    StoryViewAdapter storyViewAdapter;
 
 
     public static HomeScreenStoriesFragment newInstance(FragmentPreviewListener listener){
@@ -82,10 +70,30 @@ public class HomeScreenStoriesFragment extends Fragment implements OnClickListen
         View view = inflater.inflate(R.layout.fragment_stories, container, false);
         storyViewRV = view.findViewById(R.id.storyViewRV);
         storyViewRV.setLayoutManager(new LinearLayoutManager(getContext(),LinearLayoutManager.HORIZONTAL,false));
-        storyViewRV.setAdapter(new StoryViewAdapter(usernameList, this));
-        addStoryIcon = view.findViewById(R.id.icAddStory);
+        storyViewAdapter = new StoryViewAdapter(usernameList, this);
+        storyViewRV.setAdapter(storyViewAdapter);
 
-        addStoryIcon.setOnClickListener( v1 -> {
+        storyViewRV.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+            @Override
+            public void onGlobalLayout() {
+                if(!selectedMediaUris.isEmpty()){
+                    Log.d("stories" , "calling the check method");
+                    storyViewAdapter.applySelfStoryGradient();
+                }
+                storyViewRV.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+            }
+        });
+        return view;
+    }
+
+    @Override
+    public void onClick(int position, Boolean isAddIconClicked) {
+        if(position == 0 && !isAddIconClicked){
+            Intent intent = new Intent(requireContext(), StoryPlayerActivity.class);
+            intent.putParcelableArrayListExtra("uriList", new ArrayList<>(selectedMediaUris));
+            startActivity(intent);
+        }
+        else if(position == 0){
             AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
             builder.setTitle("Select a option");
             View customView = LayoutInflater.from(requireContext()).inflate(R.layout.story_alert_dialog, null);
@@ -95,27 +103,6 @@ public class HomeScreenStoriesFragment extends Fragment implements OnClickListen
             dialog.show();
 
             customView.findViewById(R.id.llCaptureImage).setOnClickListener( v -> {
-//                intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-//                //intent.addFlags(Intent.FLAG_FULLSCREEN);
-//                Uri uri = null;
-//                try {
-//                    imageFile = createImageFile();
-//                    uri = FileProvider.getUriForFile(requireContext(), "com.shubham.swipenest.fileprovider", imageFile);
-//                } catch (IOException e) {
-//                    e.printStackTrace();
-//                }
-//                intent.putExtra(MediaStore.EXTRA_OUTPUT, uri);
-//                if(ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA)!= PackageManager.PERMISSION_GRANTED){
-//                    permissionLauncher.launch(new String[]{Manifest.permission.CAMERA});
-//                }
-//                else receiveData.launch(intent);
-//                dialog.dismiss();
-//                intent = new Intent(getActivity(), Camera_capture.class);
-//                if(ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA)!= PackageManager.PERMISSION_GRANTED){
-//                    permissionLauncher.launch(new String[]{Manifest.permission.CAMERA});
-//                }
-//                else receiveData.launch(intent);
-//                dialog.dismiss();
                 intent = new Intent(requireContext(), CameraActivity.class);
                 receiveData.launch(intent);
                 dialog.dismiss();
@@ -130,16 +117,6 @@ public class HomeScreenStoriesFragment extends Fragment implements OnClickListen
                 Toast.makeText(requireContext(), "Select image clicked", Toast.LENGTH_SHORT).show();
                 dialog.dismiss();
             });
-        });
-        return view;
-    }
-
-    @Override
-    public void onClick(int position, StoryViewAdapter.StoryViewHolder viewHolder) {
-        if(position == 0 && !selectedMediaUris.isEmpty()){
-            Intent intent = new Intent(requireContext(), StoryPlayerActivity.class);
-            intent.putParcelableArrayListExtra("uriList", new ArrayList<>(selectedMediaUris));
-            startActivity(intent);
         }
     }
 

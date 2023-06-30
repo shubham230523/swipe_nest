@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="MySeekBar" parent="Widget.AppCompat.SeekBar">
+        <item name="android:progressBackgroundTint">@color/white</item>
+        <item name="android:progressTint">@color/white</item>
+        <item name="minHeight">15dp</item>
+        <item name="android:colorControlActivated">#03DAC6</item>
+    </style>
+
+    <style name="EditTextNoUnderline" parent="Widget.AppCompat.EditText">
+        <item name="android:background">@drawable/custom_edittext_bg</item>
+    </style>
+</resources>

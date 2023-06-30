@@ -1,19 +1,25 @@
 package com.shubham.swipenest.story.homeScreen.fragments;
 
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.media.MediaPlayer;
+import android.media.MediaScannerConnection;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.provider.MediaStore;
+import android.provider.OpenableColumns;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
@@ -27,14 +33,19 @@ import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.VideoView;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.core.content.res.ResourcesCompat;
@@ -42,19 +53,18 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.arthenica.mobileffmpeg.FFmpeg;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.DataSource;
 import com.bumptech.glide.load.engine.GlideException;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.Target;
 import com.github.chrisbanes.photoview.PhotoView;
+import com.rtugeek.android.colorseekbar.ColorSeekBar;
+import com.rtugeek.android.colorseekbar.OnColorChangeListener;
 import com.shubham.swipenest.R;
-import com.shubham.swipenest.story.MainActivity;
 import com.shubham.swipenest.story.homeScreen.fragments.preview.adapters.TypographyAdapter;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -64,12 +74,9 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
 
-import top.defaults.colorpicker.ColorPickerPopup;
-
-public class PickedMediaPreviewFragment extends Fragment implements View.OnTouchListener, OnClickListener{
+public class PickedMediaPreviewFragment extends Fragment implements View.OnTouchListener, OnClickListener {
 
     private FragmentPreviewListener listener;
-
 
     public static PickedMediaPreviewFragment newInstance(FragmentPreviewListener listener) {
         PickedMediaPreviewFragment fragment = new PickedMediaPreviewFragment();
@@ -77,8 +84,8 @@ public class PickedMediaPreviewFragment extends Fragment implements View.OnTouch
         return fragment;
     }
 
-    Uri imageUri, videoUri;
-    ImageView btnDeSelect, btnAddText, btnPickColor, btnDeleteText;
+    Uri imageUri, videoUri, outputFileUri;
+    ImageView btnDeSelect, btnAddText, btnDeleteText;
     PhotoView pickedImage;
     ImageView btnAddToStory;
     VideoView videoView;
@@ -87,14 +94,17 @@ public class PickedMediaPreviewFragment extends Fragment implements View.OnTouch
     Handler handler;
     TextView tvUserTyped, tvDoneTyping;
     RelativeLayout rlPreviewImg;
+    ConstraintLayout parentLayout;
     RecyclerView rvTypography;
     EditText editText;
     SeekBar textSizeSeekbar;
+    ColorSeekBar colorSeekBar;
     int textColor = Color.WHITE;
     int textSize = 16;
     Typeface textTypeface;
     int lastSelectedTypographyPosition = 0;
-    ArrayList<Integer> textInsertedIdList = new ArrayList<>();
+    ImageView.ScaleType currentScaleType;
+    Float restoredScale, scaleX , scaleY;
 
     @Nullable
     @Override
@@ -104,7 +114,6 @@ public class PickedMediaPreviewFragment extends Fragment implements View.OnTouch
         pickedImage = view.findViewById(R.id.ivImgPreview);
         btnDeSelect = view.findViewById(R.id.btnDeselect);
         btnAddToStory = view.findViewById(R.id.btnAddToStory);
-        btnPickColor = view.findViewById(R.id.btnPickColor);
         btnDeleteText = view.findViewById(R.id.btnDeleteText);
         videoView = view.findViewById(R.id.VideoPreview);
         btnAddText = view.findViewById(R.id.btnAddText);
@@ -113,6 +122,8 @@ public class PickedMediaPreviewFragment extends Fragment implements View.OnTouch
         rlPreviewImg = view.findViewById(R.id.rl_preview_img);
         textSizeSeekbar = view.findViewById(R.id.fontSeekbar);
         textSizeSeekbar.setProgress(textSize);
+        colorSeekBar = view.findViewById(R.id.color_seekbar);
+        colorSeekBar.setColor(Color.WHITE);
         handler = new Handler();
         textTypeface = ResourcesCompat.getFont(requireContext(), R.font.caprasimo_regular);
         // typography recycler view
@@ -120,6 +131,35 @@ public class PickedMediaPreviewFragment extends Fragment implements View.OnTouch
         TypographyAdapter typographyAdapter = new TypographyAdapter(8, requireContext(), this);
         rvTypography.setAdapter(typographyAdapter);
         rvTypography.setLayoutManager(new LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false));
+
+        parentLayout = view.findViewById(R.id.parent);
+        LinearLayout llColorSeekbar = view.findViewById(R.id.llColorSeekbar);
+
+        parentLayout.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+            @Override
+            public void onGlobalLayout() {
+                Rect r = new Rect();
+                parentLayout.getWindowVisibleDisplayFrame(r);
+                int screenHeight = parentLayout.getHeight();
+                int keypadHeight = screenHeight - r.bottom-120;
+
+                if (keypadHeight > screenHeight * 0.15) {
+                    // Keyboard is visible
+                    llColorSeekbar.setPadding(0, 0, 0, keypadHeight);
+                    rvTypography.setVisibility(View.VISIBLE);
+                    colorSeekBar.setVisibility(View.VISIBLE);
+                    llColorSeekbar.setVisibility(View.VISIBLE);
+                    pickedImage.setForeground(ContextCompat.getDrawable(requireContext(), R.drawable.black_blur_foreground));
+                } else {
+                    // Keyboard is hidden
+                    llColorSeekbar.setPadding(0, 0, 0, 0);
+                    llColorSeekbar.setVisibility(View.GONE);
+                    rvTypography.setVisibility(View.GONE);
+                    colorSeekBar.setVisibility(View.GONE);
+                    pickedImage.setForeground(null);
+                }
+            }
+        });
 
 
         if(getArguments()!=null){
@@ -150,7 +190,7 @@ public class PickedMediaPreviewFragment extends Fragment implements View.OnTouch
             else if(videoUri!=null){
                 pickedImage.setImageAlpha(0);
                 Log.d("FragmentPreview", "inside videoUri " + videoUri);
-                btnAddText.setVisibility(View.VISIBLE);
+                btnAddText.setVisibility(View.GONE);
                 videoView.setVisibility(View.VISIBLE);
                 videoView.setVideoURI(videoUri);
                 videoView.setOnPreparedListener(mp -> {
@@ -224,7 +264,8 @@ public class PickedMediaPreviewFragment extends Fragment implements View.OnTouch
 
                         if (isDroppedOnDeleteIcon) {
                             // Remove the dragged TextView
-                            textInsertedIdList.remove(tvUserTyped.getId());
+                            Log.d("preview" , "before id list remove ");
+                            Log.d("preview" , "after id list remove ");
                             ViewGroup parentView = (ViewGroup) tvUserTyped.getParent();
                             parentView.removeView(tvUserTyped);
                             btnDeleteText.setVisibility(View.GONE);
@@ -249,23 +290,14 @@ public class PickedMediaPreviewFragment extends Fragment implements View.OnTouch
             listener.onCancelClicked();
         });
 
-        btnPickColor.setOnClickListener(v -> {
-            new ColorPickerPopup.Builder(requireContext())
-                    .initialColor(Color.RED) // Set initial color
-                    .enableBrightness(true) // Enable brightness slider or not
-                    .enableAlpha(true) // Enable alpha slider or not
-                    .okTitle("Choose")
-                    .cancelTitle("Cancel")
-                    .showIndicator(true)
-                    .showValue(true)
-                    .build()
-                    .show(v, new ColorPickerPopup.ColorPickerObserver() {
-                        @Override
-                        public void onColorPicked(int color) {
-                            textColor = color;
-                            editText.setTextColor(color);
-                        }
-                    });
+        colorSeekBar.setOnColorChangeListener(new OnColorChangeListener() {
+            @Override
+            public void onColorChangeListener(int progress, int color) {
+                textColor = color;
+                if(editText!=null){
+                    editText.setTextColor(color);
+                }
+            }
         });
 
         // adding a edit text first and after user presses enter, we are getting the text from edit text
@@ -278,13 +310,22 @@ public class PickedMediaPreviewFragment extends Fragment implements View.OnTouch
                     RelativeLayout.LayoutParams.WRAP_CONTENT,
                     RelativeLayout.LayoutParams.WRAP_CONTENT
             );
-            layoutParams.addRule(RelativeLayout.CENTER_IN_PARENT, R.id.rl_preview_img);
+            layoutParams.addRule(RelativeLayout.CENTER_HORIZONTAL, R.id.rl_preview_img);
+            layoutParams.addRule(RelativeLayout.ALIGN_PARENT_TOP, R.id.rl_preview_img);
             editText.setLayoutParams(layoutParams);
+            editText.setPadding(0, 500, 0, 0);
             editText.setImeOptions(EditorInfo.IME_ACTION_DONE);
             editText.setTextSize(textSize);
             editText.setTextColor(textColor);
             editText.setTypeface(textTypeface);
+            editText.setBackground(ContextCompat.getDrawable(requireContext(), R.drawable.custom_edittext_bg));
+
+            pickedImage.setDrawingCacheEnabled(true);
+            Bitmap zoomedBitmap = Bitmap.createBitmap(pickedImage.getDrawingCache());
             rlPreviewImg.addView(editText);
+            pickedImage.setDrawingCacheEnabled(false);
+            pickedImage.setImageBitmap(zoomedBitmap);
+
             editText.setFocusableInTouchMode(true);
             editText.requestFocus();
             InputMethodManager inputMethodManager = (InputMethodManager) requireContext().getSystemService(Context.INPUT_METHOD_SERVICE);
@@ -307,20 +348,20 @@ public class PickedMediaPreviewFragment extends Fragment implements View.OnTouch
                     if(enteredText.isEmpty()){
                         tvDoneTyping.setVisibility(View.GONE);
                         textSizeSeekbar.setVisibility(View.GONE);
-                        btnPickColor.setVisibility(View.GONE);
-                        rvTypography.setVisibility(View.GONE);
+                        //rvTypography.setVisibility(View.GONE);
                     }else {
                         tvDoneTyping.setVisibility(View.VISIBLE);
                         textSizeSeekbar.setVisibility(View.VISIBLE);
-                        btnPickColor.setVisibility(View.VISIBLE);
-                        rvTypography.setVisibility(View.VISIBLE);
+                        //rvTypography.setVisibility(View.VISIBLE);
                     }
                 }
             });
 
+            pickedImage.setForeground(ContextCompat.getDrawable(requireContext(), R.drawable.black_blur_foreground));
         });
 
         tvDoneTyping.setOnClickListener(v -> {
+            pickedImage.setForeground(null);
             if(editText!=null){
                 // Get the entered text
                 String enteredText = editText.getText().toString();
@@ -336,16 +377,17 @@ public class PickedMediaPreviewFragment extends Fragment implements View.OnTouch
                 tvUserTyped.setTextColor(textColor);
                 int id = View.generateViewId();
                 tvUserTyped.setId(id);
-                textInsertedIdList.add(id);
                 editText = null;
 
                 RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(
                         RelativeLayout.LayoutParams.WRAP_CONTENT,
                         RelativeLayout.LayoutParams.WRAP_CONTENT
                 );
-                layoutParams.addRule(RelativeLayout.CENTER_IN_PARENT, R.id.rl_preview_img);
-
+                layoutParams.addRule(RelativeLayout.CENTER_HORIZONTAL, R.id.rl_preview_img);
+                layoutParams.addRule(RelativeLayout.ALIGN_PARENT_TOP, R.id.rl_preview_img);
                 tvUserTyped.setLayoutParams(layoutParams);
+                layoutParams.setMargins(0, 500, 0, 0);
+                //tvUserTyped.setPadding(0, 0, 0, 300);
                 tvUserTyped.setFocusable(true);
 
                 // Add the TextView to the RelativeLayout
@@ -354,7 +396,6 @@ public class PickedMediaPreviewFragment extends Fragment implements View.OnTouch
                 tvDoneTyping.setVisibility(View.GONE);
                 textSizeSeekbar.setVisibility(View.GONE);
                 rvTypography.setVisibility(View.GONE);
-                btnPickColor.setVisibility(View.GONE);
             }
         });
 
@@ -437,82 +478,7 @@ public class PickedMediaPreviewFragment extends Fragment implements View.OnTouch
                 }
             }
             else {
-                if(tvUserTyped!=null){
-
-                    // setting the image alpha to 0 so that it doesn't come in bitmap
-                    pickedImage.setImageAlpha(0);
-                    videoView.setVisibility(View.GONE);
-
-                    Bitmap bitmap = Bitmap.createBitmap(rlPreviewImg.getWidth(), rlPreviewImg.getHeight(), Bitmap.Config.ARGB_8888);
-                    Canvas canvas = new Canvas(bitmap);
-                    rlPreviewImg.draw(canvas);
-
-                    // creating the file
-                    String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-                    String imageFileName = "IMG_" + timeStamp + "_";
-
-                    File storageDir = requireContext().getExternalFilesDir(Environment.DIRECTORY_PICTURES);
-
-                    FileOutputStream outputStream = null;
-
-                    try {
-
-                        File zoomedFiled = File.createTempFile(imageFileName, ".jpg", storageDir);
-                        outputStream = new FileOutputStream(zoomedFiled);
-                        // writing zoomed image bitmap to file
-                        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream);
-                        outputStream.flush();
-                        Uri uri = FileProvider.getUriForFile(requireContext(), "com.shubham.swipenest.fileprovider", zoomedFiled);
-
-
-                        // creating and getting the output file path
-                        String timeStamp1 = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
-                        String outputFileName = "VIDEO_" + timeStamp1 + "_";
-                        File videoStorageDir = requireContext().getExternalFilesDir(Environment.DIRECTORY_MOVIES);
-                        File outputFile = File.createTempFile(outputFileName, ".mp4", videoStorageDir);
-
-                        String imagefilePath = getFilePathFromUriByCreatingTempFile(uri);
-                        String videoFilePath = getFilePathFromUriByCreatingTempFile(videoUri);
-                        String outputFilePath = outputFile.getAbsolutePath();
-                        Uri outputFileUri = FileProvider.getUriForFile(requireContext(), "com.shubham.swipenest.fileprovider", outputFile);
-
-                        Log.d("preview" , "videoPath " + videoFilePath + " imagePath " + imagefilePath + " outputPath " + outputFilePath);
-
-                        // command for overlaying image file inside video
-                        String[] ffmpegCommand = {
-                                "-i", videoFilePath,
-                                "-i", imagefilePath,
-                                "-filter_complex", "[0:v][1:v] overlay=10:10:enable='between(t,2,8)'",
-                                "-c:a", "copy",
-                                "-c:v", "libx264",
-                                "-preset", "ultrafast",
-                                "-crf", "23",
-                                outputFilePath
-                        };
-
-                        // executing the command
-                        FFmpeg.execute(ffmpegCommand);
-
-//                        // sending the uri back
-//                        Uri combinedUri = Uri.parse(videoUri.toString() + "$" + uri.toString());
-//                        Log.d("combinedUri" ,"uri's combined " + combinedUri);
-                        listener.onUriSelected(outputFileUri);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    } finally {
-                        try {
-                            if (outputStream != null) {
-                                outputStream.close();
-                            }
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
-
-                }
-                else {
-                    listener.onUriSelected(videoUri);
-                }
+                listener.onUriSelected(videoUri);
             }
         });
 
@@ -530,6 +496,18 @@ public class PickedMediaPreviewFragment extends Fragment implements View.OnTouch
             return false;
         }
     }
+
+    private final ActivityResultLauncher<String[]> overlayImagesPermissionLauncher = registerForActivityResult(
+            new ActivityResultContracts.RequestMultiplePermissions(),
+            result -> {
+                boolean granted = true;
+                for(Boolean per : result.values()){
+                    if(!per){
+                        granted = false;
+                    }
+                }
+            }
+    );
 
     @Override
     public void onClick(int position, Typeface font) {
@@ -584,9 +562,9 @@ public class PickedMediaPreviewFragment extends Fragment implements View.OnTouch
         return Rect.intersects(rect1, rect2);
     }
 
-    private String getFilePathFromUriByCreatingTempFile(Uri uri) throws IOException {
+    private String getFilePathFromUriByCreatingTempFile(Uri uri, String suffix) throws IOException {
         InputStream inputStream = requireContext().getContentResolver().openInputStream(uri);
-        File tempFile = File.createTempFile("temp_" , null, requireContext().getCacheDir());
+        File tempFile = File.createTempFile("temp_" , suffix,  requireContext().getCacheDir());
         OutputStream outputStream1 = new FileOutputStream(tempFile);
         byte[] buffer = new byte[8 * 1024];
         int bytesRead;
@@ -596,4 +574,99 @@ public class PickedMediaPreviewFragment extends Fragment implements View.OnTouch
         inputStream.close();
         return tempFile.getAbsolutePath();
     }
+
+    public static String createFileFromUri(Context context, Uri uri) throws IOException {
+        // Get the file name from the URI
+        String fileName = getFileName(context, uri);
+
+        // Create a file in the external files directory
+        File file = new File(context.getExternalFilesDir(null), fileName);
+
+        // Copy the contents of the URI to the file
+        InputStream inputStream = context.getContentResolver().openInputStream(uri);
+        OutputStream outputStream = new FileOutputStream(file);
+        byte[] buffer = new byte[4096];
+        int bytesRead;
+        while ((bytesRead = inputStream.read(buffer)) != -1) {
+            outputStream.write(buffer, 0, bytesRead);
+        }
+        outputStream.close();
+        inputStream.close();
+
+        // Return the path of the created file
+        return file.getAbsolutePath();
+    }
+
+    private static String getFileName(Context context, Uri uri) {
+        String fileName = null;
+        Cursor cursor = context.getContentResolver().query(uri, null, null, null, null);
+        if (cursor != null && cursor.moveToFirst()) {
+            int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+            if (nameIndex != -1) {
+                fileName = cursor.getString(nameIndex);
+            }
+        }
+        if (cursor != null) {
+            cursor.close();
+        }
+        return fileName;
+    }
+
+    public static File createVideoFile(Context context) {
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+        String videoFileName = "VIDEO_" + timeStamp + getFileExtension();
+        File storageDir;
+        File videoFile = null;
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ContentResolver contentResolver = context.getContentResolver();
+            ContentValues contentValues = new ContentValues();
+            contentValues.put(MediaStore.Video.Media.RELATIVE_PATH, Environment.DIRECTORY_MOVIES);
+            contentValues.put(MediaStore.Video.Media.DISPLAY_NAME, videoFileName);
+            contentValues.put(MediaStore.Video.Media.MIME_TYPE, "video/mp4");
+
+            Uri videoUri = contentResolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, contentValues);
+            if (videoUri != null) {
+                videoFile = getFileFromUri(context, videoUri);
+            }
+        } else {
+            storageDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "YourAppName");
+
+            if (!storageDir.exists()) {
+                if (!storageDir.mkdirs()) {
+                    return null;
+                }
+            }
+
+            videoFile = new File(storageDir, videoFileName);
+        }
+
+        // Scan the media file to make it visible in the gallery app
+        if (videoFile != null) {
+            MediaScannerConnection.scanFile(context, new String[]{videoFile.getAbsolutePath()}, null, null);
+        }
+
+        return videoFile;
+    }
+
+    private static File getFileFromUri(Context context, Uri uri) {
+        if (uri == null) {
+            return null;
+        }
+
+        String[] projection = {MediaStore.Video.Media.DATA};
+        Cursor cursor = context.getContentResolver().query(uri, projection, null, null, null);
+        if (cursor != null && cursor.moveToFirst()) {
+            int columnIndex = cursor.getColumnIndexOrThrow(MediaStore.Video.Media.DATA);
+            String filePath = cursor.getString(columnIndex);
+            cursor.close();
+            return new File(filePath);
+        }
+        return null;
+    }
+
+    private static String getFileExtension() {
+        return ".mp4";
+    }
+
 }

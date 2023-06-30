@@ -11,5 +11,5 @@
         android:right="15dp"
         android:left="15dp"/>
     <solid
-        android:color="#60000000"/>
+        android:color="#40ffffff"/>
 </shape>

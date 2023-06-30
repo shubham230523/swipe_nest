@@ -1,5 +1,6 @@
 package com.shubham.swipenest.story;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -8,17 +9,23 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.cardview.widget.CardView;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.shubham.swipenest.utils.OnClickListener;
 import com.shubham.swipenest.R;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 public class StoryViewAdapter extends RecyclerView.Adapter<StoryViewAdapter.StoryViewHolder> {
 
     OnClickListener onClickListener;
-    String[] usernameList;
+    private Boolean showSelfStoryGradient = false;
+    List<String> usernameList = new ArrayList<>();
     public StoryViewAdapter(String[] usernameList, OnClickListener clickListener) {
-        this.usernameList = usernameList;
+        this.usernameList.addAll(Arrays.asList(usernameList));
         this.onClickListener = clickListener;
     }
 
@@ -42,28 +49,49 @@ public class StoryViewAdapter extends RecyclerView.Adapter<StoryViewAdapter.Stor
 
     @Override
     public void onBindViewHolder(@NonNull StoryViewHolder holder, int position) {
-        holder.username.setText(usernameList[position]);
-//        if(position == 0) holder.plusIcon.setVisibility(View.VISIBLE);
-        holder.frameLayout.setOnClickListener(view -> {
-            onClickListener.onClick(position, holder);
-        });
+
+        holder.username.setText(usernameList.get(position));
+        if(position == 0){
+            holder.profileAddStoryIcon.setVisibility(View.VISIBLE);
+            if(showSelfStoryGradient){
+                holder.imgProfile.setVisibility(View.GONE);
+                holder.imgProfileStatus.setVisibility(View.VISIBLE);
+            }
+            holder.imgProfileStatus.setOnClickListener(v -> {
+                onClickListener.onClick(0, false);
+            });
+            holder.profileAddStoryIcon.setOnClickListener(v -> {
+                onClickListener.onClick(0, true);
+            });
+        }
+
+
+    }
+
+    public void applySelfStoryGradient(){
+        if(!showSelfStoryGradient){
+            showSelfStoryGradient = true;
+            notifyItemChanged(0);
+        }
     }
 
     @Override
     public int getItemCount() {
-        return usernameList.length;
+        return usernameList.size();
     }
 
     public static class StoryViewHolder extends RecyclerView.ViewHolder
     {
         TextView username;
-        public ImageView plusIcon;
-        FrameLayout frameLayout;
+        public ImageView imgProfile, profileAddStoryIcon, imgProfileStatus;
+        public CardView imgCard;
         public StoryViewHolder(@NonNull View itemView) {
             super(itemView);
             username = itemView.findViewById(R.id.username);
-            frameLayout = itemView.findViewById(R.id.frameLayout);
-            plusIcon = itemView.findViewById(R.id.imageView);
+            profileAddStoryIcon = itemView.findViewById(R.id.profileStoryAddIcon);
+            imgProfile = itemView.findViewById(R.id.imgProfile);
+            imgCard = itemView.findViewById(R.id.imgCard);
+            imgProfileStatus = itemView.findViewById(R.id.imgProfileStatus);
         }
     }
 

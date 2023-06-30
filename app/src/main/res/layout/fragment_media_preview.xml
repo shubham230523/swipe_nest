@@ -3,13 +3,15 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#70000000"
+    android:background="@color/black"
+    android:id="@+id/parent"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
+    <!-- cancel icon -->
     <ImageView
         android:layout_width="30dp"
         android:layout_height="30dp"
-        android:src="@drawable/ic_cancel"
+        android:src="@drawable/ic_close"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         android:layout_marginTop="15dp"
@@ -18,17 +20,7 @@
         android:layout_marginStart="15dp"
         android:id="@+id/btnDeselect"/>
 
-    <ImageView
-        android:layout_width="30dp"
-        android:layout_height="30dp"
-        android:id="@+id/btnPickColor"
-        android:visibility="invisible"
-        android:src="@drawable/ic_pick_color"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/btnAddText"
-        android:layout_marginTop="15dp"
-        android:layout_marginEnd="15dp"/>
-
+    <!-- add text option -->
     <ImageView
         android:layout_width="30dp"
         android:layout_height="30dp"
@@ -40,6 +32,7 @@
         android:layout_marginTop="15dp"
         android:layout_marginEnd="15dp"/>
 
+    <!-- done button -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -54,6 +47,7 @@
         app:layout_constraintTop_toTopOf="parent"
         android:layout_marginTop="15dp"/>
 
+    <!-- image view and video view -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -72,32 +66,44 @@
 
         <VideoView
             android:id="@+id/VideoPreview"
-            android:visibility="visible"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:layout_centerInParent="true"
             android:layout_marginTop="10dp"
-            android:layout_marginBottom="10dp" />
+            android:layout_marginBottom="10dp"
+            android:visibility="visible" />
 
     </RelativeLayout>
 
+    <!-- text size seekbar guideline -->
+    <androidx.constraintlayout.widget.Guideline
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/seekbar_right_guideline"
+        android:orientation="vertical"
+        app:layout_constraintGuide_percent="0.6"/>
+
+    <!-- text size seekbar -->
     <SeekBar
-        android:layout_width="0dp"
+        android:layout_width="250dp"
         android:layout_height="15dp"
         android:orientation="horizontal"
         android:id="@+id/fontSeekbar"
         android:focusable="true"
         android:max="100"
+        android:rotation="270"
         android:elevation="20dp"
         android:translationZ="20dp"
-        android:layout_marginTop="60dp"
-        android:layout_marginStart="30dp"
-        android:layout_marginEnd="30dp"
+        android:layout_marginTop="250dp"
+        android:layout_marginStart="-150dp"
         android:focusedByDefault="true"
         android:visibility="gone"
+        android:theme="@style/MySeekBar"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/btnDeselect" />
+        app:layout_constraintEnd_toStartOf="@id/seekbar_right_guideline"
+        app:layout_constraintTop_toTopOf="parent" />
 
+    <!-- delete icon -->
     <ImageView
         android:layout_width="40dp"
         android:layout_height="40dp"
@@ -108,26 +114,48 @@
         android:clickable="true"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/rvTypography"
+        app:layout_constraintBottom_toTopOf="@id/llColorSeekbar"
         android:src="@drawable/ic_delete"/>
 
-    <androidx.recyclerview.widget.RecyclerView
+    <LinearLayout
         android:layout_width="match_parent"
+        android:id="@+id/llColorSeekbar"
+        app:layout_constraintBottom_toTopOf="@id/btnAddToStory"
         android:layout_height="wrap_content"
-        android:id="@+id/rvTypography"
-        android:elevation="40dp"
-        android:layout_marginStart="15dp"
-        android:layout_marginEnd="15dp"
-        android:visibility="invisible"
-        android:translationZ="40dp"
-        app:layout_constraintBottom_toTopOf="@id/btnAddToStory"/>
+        android:orientation="vertical">
 
+        <!-- typography recyclerview -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/rvTypography"
+            android:elevation="40dp"
+            android:layout_marginStart="15dp"
+            android:layout_marginEnd="15dp"
+            android:visibility="invisible"
+            android:translationZ="40dp" />
+
+        <com.rtugeek.android.colorseekbar.ColorSeekBar
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:visibility="gone"
+            android:elevation="40dp"
+            app:colorSeekBarProgress="900"
+            android:translationZ="40dp"
+            app:colorSeekBarMaxProgress="1000"
+            android:id="@+id/color_seekbar" />
+    </LinearLayout>
+
+
+    <!-- text add to story -->
     <TextView
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:id="@+id/tvAddToStory"
         android:text="Add to story"
         android:textSize="14sp"
+        android:elevation="2dp"
+        android:layout_marginBottom="10dp"
         app:layout_constraintEnd_toStartOf="@id/btnAddToStory"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -138,10 +166,12 @@
         android:background="@drawable/add_to_story_drawable"
         android:padding="15dp"/>
 
+    <!-- button add to story -->
     <ImageView
         android:layout_width="50dp"
         android:layout_marginEnd="15dp"
         android:layout_height="50dp"
+        android:layout_marginBottom="10dp"
         android:src="@drawable/ic_add_to_story"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"
