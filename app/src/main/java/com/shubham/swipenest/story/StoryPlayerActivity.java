@@ -214,6 +214,9 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
             @Override
             public void onShowPress(@NonNull MotionEvent e) {
                 storiesProgressView.pause();
+                if(storyVideoView!=null && storyVideoView.isPlaying()){
+                    storyVideoView.pause();
+                }
                 super.onShowPress(e);
             }
 
@@ -259,6 +262,9 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
                             collapseBottomSheet();
 //                            bottomSheetBehavior.setState(BottomSheetBehavior.STATE_COLLAPSED);
                             storiesProgressView.resume();
+                            if(storyVideoView!=null && !storyVideoView.isPlaying()){
+                                storyVideoView.start();
+                            }
                             return true;
                         }
                     } else {
@@ -269,6 +275,9 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
 //                            bottomSheetBehavior.setState(BottomSheetBehavior.STATE_EXPANDED);
                             //animator.start();
                             storiesProgressView.pause();
+                            if(storyVideoView!=null && storyVideoView.isPlaying()){
+                                storyVideoView.pause();
+                            }
                             return true;
                         }
                     }
@@ -414,6 +423,9 @@ public class StoryPlayerActivity extends AppCompatActivity implements StoriesPro
     public boolean onTouchEvent(MotionEvent event) {
         if(event.getAction() == MotionEvent.ACTION_UP && bottomSheetBehavior.getState()!=BottomSheetBehavior.STATE_EXPANDED){
             storiesProgressView.resume();
+            if(storyVideoView!=null && !storyVideoView.isPlaying()){
+                storyVideoView.start();
+            }
         }
         return gestureDetector.onTouchEvent(event);
     }
